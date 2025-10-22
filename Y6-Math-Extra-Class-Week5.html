@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Y6 Geometry Game - Angles, Nets, Area, Volume (FIXED)</title>
+  <style>
+    :root{--bg:#f6fbff;--card:#ffffff;--accent:#0b5cff;--muted:#6b7280}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:var(--bg); margin:0; padding:18px; color:#0b1220}
+    .wrap{max-width:1200px;margin:0 auto}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    header h1{font-size:18px;margin:0}
+    /* LEFT = question bank, RIGHT = main question area */
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(8,30,60,0.06)}
+    .question{padding:10px;border-radius:8px;border:1px solid #eef2ff}
+    .topic-list{display:flex;flex-direction:column;gap:10px}
+    .question-item{cursor:pointer;padding:10px;border-radius:8px;border:1px dashed #eef6ff;background:transparent}
+    .question-item:hover{background:#f0f8ff}
+    .tools{display:flex;gap:8px;margin-bottom:8px}
+    input[type='number'], input[type='text']{width:100%;padding:8px;border-radius:6px;border:1px solid #e6eefc;margin-bottom:8px}
+    button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(11,92,255,0.14)}
+    .small{padding:6px 8px;font-size:13px}
+    .q-meta{font-size:13px;color:var(--muted);margin-bottom:8px}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Y6 Geometry Game — Angles, Nets, Area, Volume</h1>
+      <div class="q-meta">Click any question on the left. The main area on the right will show the question and answer tools.</div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Question Bank -->
+      <aside class="card" id="leftBank">
+        <h3>Question Bank</h3>
+        <div class="q-meta">Topics & questions (click any to answer). Use the filter to show only a topic.</div>
+        <div style="margin:8px 0;display:flex;gap:8px;align-items:center;">
+          <select id="topicFilter" style="flex:1;padding:8px;border-radius:6px;border:1px solid #e6eefc;">
+            <option value="1">🟢 Angles in Triangles</option>
+            <option value="2">🔵 3D Shapes & Nets</option>
+            <option value="3">🟡 Area of Triangles</option>
+            <option value="4">🟠 Drawing & Measuring Angles</option>
+            <option value="5">🔴 Volume & Cubes</option>
+          </select>
+          <button id="filterBtn" class="small">Filter</button>
+        </div>
+        <div id="questionList" class="topic-list" aria-live="polite" style="max-height:66vh;overflow:auto;padding-right:6px"></div>
+      </aside>
+
+      <!-- RIGHT: Main question area -->
+      <main class="card" id="mainArea">
+        <div id="topicArea"></div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Data (same as before)
+    const data = {
+      1: { title: 'Angles in Triangles', questions: [
+        {id:'1-o', text: 'A right-angled triangle has one of the angles measured at 35°. Find the size of the other angle (in degrees).', type:'numeric', answer:55},
+        {id:'1-s1', text: 'A right-angled triangle has one of its angles equal to 48°. Find the size of the remaining angle.', type:'numeric', answer:42},
+        {id:'1-s2', text: 'In a right-angled triangle, one acute angle measures 60°. What is the size of the other acute angle?', type:'numeric', answer:30},
+        {id:'1-s3', text: 'A right-angled triangle has one of the angles measuring 25°. Work out the third angle.', type:'numeric', answer:65}
+      ]},
+      2: { title: '3D Shapes and Nets', questions:[
+        {id:'2-o', text:'Sketch the net of a triangular prism.', type:'sketch'},
+        {id:'2-s1', text:'Draw or describe the net of a cube.', type:'sketch_or_text', answerText:['net of a cube','cube net','6 squares']},
+        {id:'2-s2', text:'Sketch the net of a square-based pyramid.', type:'sketch_or_text', answerText:['square based pyramid net','1 square and 4 triangles','pyramid net']},
+        {id:'2-s3', text:'Which 3D shape has a net made up of two triangles and three rectangles?', type:'text', answerText:['triangular prism','a triangular prism']},
+        {id:'2-s4', text:'How many faces, edges, and vertices does a triangular prism have?', type:'text', answerText:['5 faces 9 edges 6 vertices','faces 5 edges 9 vertices 6','5, 9, 6']}
+      ]},
+      3: { title: 'Area of Triangles', questions:[
+        {id:'3-o', text:'A right-angled triangle has a base of 8 cm and a height of 4 cm. Calculate the area of the triangle.', type:'numeric', answer:16},
+        {id:'3-s1', text:'Find the area of a triangle with a base of 10 cm and a height of 5 cm.', type:'numeric', answer:25},
+        {id:'3-s2', text:'Calculate the area of a triangle that has a base of 12 cm and height of 9 cm.', type:'numeric', answer:54},
+        {id:'3-s3', text:'The area of a triangle is 24 cm², and its base is 8 cm. Find its height.', type:'numeric', answer:6},
+        {id:'3-s4', text:'A triangle has a base of 7 cm and an area of 21 cm². Find its height.', type:'numeric', answer:6}
+      ]},
+      4: { title: 'Drawing and Measuring Angles', questions:[
+        {id:'4-o', text:'Draw an angle that measures 120°.', type:'sketch'},
+        {id:'4-s1', text:'Draw an angle that measures 75°.', type:'sketch'},
+        {id:'4-s2', text:'Draw an obtuse angle of 140°.', type:'sketch'},
+        {id:'4-s3', text:'Using a protractor, measure an angle of 60° and label it clearly.', type:'sketch_or_text', answerText:['60','60°','60 degrees']},
+        {id:'4-s4', text:'Sketch a reflex angle greater than 180° but less than 270°.', type:'sketch'}
+      ]},
+      5: { title: 'Volume and Cubes', questions:[
+        {id:'5-o', text:'There is a cuboid made from 16 small cubes (4 by 4). Yusuf uses a number of these cuboids to make a cube. Write the total number of cuboids that Yusuf uses to make the cube.', type:'numeric', answer:4},
+        {id:'5-s1', text:'A cube is built using smaller cubes. Each side of the big cube is made up of 3 small cubes. How many small cubes are there in total?', type:'numeric', answer:27},
+        {id:'5-s2', text:'A cuboid is made of 2 layers of cubes. Each layer has 12 cubes. How many cubes are in the whole cuboid?', type:'numeric', answer:24},
+        {id:'5-s3', text:'How many 2 cm³ cubes can fit into a cube of side 6 cm?', type:'numeric', answer:108},
+        {id:'5-s4', text:'A cube is built from 8 identical cuboids. How many small cubes does each cuboid contain if the large cube has 64 cubes in total?', type:'numeric', answer:8}
+      ]}
+    };
+
+    // Helpers
+    function safeClear(el){ if (!el) return; while (el.firstChild) el.removeChild(el.firstChild); }
+    function q(selector){ return document.querySelector(selector); }
+
+    const questionList = q('#questionList');
+    const topicArea = q('#topicArea');
+
+    // Build the list for a given topic id
+    function buildListForTopic(topicId){
+      safeClear(questionList);
+      const t = data[topicId];
+      const header = document.createElement('div'); header.className='q-meta'; header.textContent = t.title; questionList.appendChild(header);
+      t.questions.forEach(qItem=>{
+        const el = document.createElement('div'); el.className='question-item'; el.tabIndex=0; el.textContent = qItem.text; el.dataset.qid = qItem.id; el.addEventListener('click', ()=>openQuestion(topicId, qItem.id)); el.addEventListener('keypress', (ev)=>{ if(ev.key==='Enter') openQuestion(topicId, qItem.id); });
+        questionList.appendChild(el);
+      });
+    }
+
+    // Open a question in main area
+    function openQuestion(topicId, qid){
+      const t = data[topicId];
+      const qItem = t.questions.find(x=>x.id===qid);
+      if(!qItem) return;
+      safeClear(topicArea);
+      const title = document.createElement('h2'); title.textContent = t.title; topicArea.appendChild(title);
+
+      const qBox = document.createElement('div'); qBox.className='question'; qBox.innerHTML = '<strong>Question</strong><p>'+qItem.text+'</p>';
+      topicArea.appendChild(qBox);
+
+      // answer area
+      const ansWrap = document.createElement('div'); ansWrap.style.marginTop='12px';
+
+      if(qItem.type === 'numeric'){
+        const inp = document.createElement('input'); inp.type='number'; inp.placeholder='Type number here'; inp.id='numericAnswerInput';
+        const check = document.createElement('button'); check.textContent='Check'; check.className='small';
+        const feedback = document.createElement('div'); feedback.className='q-meta'; feedback.style.marginTop='8px';
+        check.addEventListener('click', ()=>{
+          const valStr = inp.value.trim();
+          if(valStr === ''){ feedback.textContent = 'Please enter a number.'; feedback.style.color=''; return; }
+          const val = Number(valStr);
+          const correct = qItem.answer;
+          if (Math.abs(val - correct) < 1e-6){ feedback.textContent = 'Correct — well done! ('+correct+')'; feedback.style.color='green'; }
+          else { feedback.textContent = 'Incorrect. Your: '+val+' — Expected: '+correct; feedback.style.color='crimson'; }
+        });
+        ansWrap.appendChild(inp); ansWrap.appendChild(document.createElement('div')); ansWrap.appendChild(check); ansWrap.appendChild(feedback);
+      }
+
+      if(qItem.type === 'text' || qItem.type === 'sketch_or_text'){
+        const inp = document.createElement('input'); inp.type='text'; inp.placeholder='Type short answer here';
+        const check = document.createElement('button'); check.textContent='Check'; check.className='small';
+        const feedback = document.createElement('div'); feedback.className='q-meta'; feedback.style.marginTop='8px';
+        check.addEventListener('click', ()=>{
+          const val = inp.value.trim().toLowerCase();
+          if(!val){ feedback.textContent='Please enter an answer or draw on the canvas.'; return; }
+          if(!qItem.answerText){ feedback.textContent = 'Answer recorded: "'+val+'"'; return; }
+          const ok = qItem.answerText.some(a=> val.includes(a));
+          feedback.textContent = ok ? 'Good — matches expected phrasing.' : 'Not matched. Examples: '+qItem.answerText.join(' / ');
+        });
+        ansWrap.appendChild(inp); ansWrap.appendChild(document.createElement('div')); ansWrap.appendChild(check); ansWrap.appendChild(feedback);
+      }
+
+      if(qItem.type === 'sketch' || qItem.type === 'sketch_or_text'){
+        const tools = document.createElement('div'); tools.className='tools';
+        const penBtn = document.createElement('button'); penBtn.textContent='Pen'; penBtn.className='small';
+        const eraserBtn = document.createElement('button'); eraserBtn.textContent='Eraser'; eraserBtn.className='small ghost';
+        const clearBtn = document.createElement('button'); clearBtn.textContent='Clear'; clearBtn.className='small ghost';
+        const saveBtn = document.createElement('button'); saveBtn.textContent='Save'; saveBtn.className='small';
+        tools.appendChild(penBtn); tools.appendChild(eraserBtn); tools.appendChild(clearBtn); tools.appendChild(saveBtn);
+
+        const canvas = document.createElement('canvas'); canvas.width = 700; canvas.height = 340; canvas.style.width='100%'; canvas.style.border='1px solid #e6eefc'; canvas.style.borderRadius='6px';
+        ansWrap.appendChild(tools); ansWrap.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0b1220';
+        let drawing=false, tool='pen', lastX=0, lastY=0;
+        function pos(e){ const rect = canvas.getBoundingClientRect(); const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left; const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top; return {x,y}; }
+        function start(e){ drawing=true; const p=pos(e); lastX=p.x; lastY=p.y; }
+        function move(e){ if(!drawing) return; e.preventDefault(); const p=pos(e); if(tool==='pen'){ ctx.globalCompositeOperation='source-over'; ctx.lineWidth=3; } else { ctx.globalCompositeOperation='destination-out'; ctx.lineWidth=16; } ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y); ctx.stroke(); lastX=p.x; lastY=p.y; }
+        function stop(){ drawing=false; }
+        canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start);
+        canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move, {passive:false});
+        canvas.addEventListener('mouseup', stop); canvas.addEventListener('mouseleave', stop); canvas.addEventListener('touchend', stop);
+
+        penBtn.addEventListener('click', ()=>{ tool='pen'; penBtn.disabled=true; eraserBtn.disabled=false; penBtn.style.opacity=1; eraserBtn.style.opacity=0.8; });
+        eraserBtn.addEventListener('click', ()=>{ tool='eraser'; eraserBtn.disabled=true; penBtn.disabled=false; eraserBtn.style.opacity=1; penBtn.style.opacity=0.8; });
+        clearBtn.addEventListener('click', ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); });
+        saveBtn.addEventListener('click', ()=>{ const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href=url; a.download = (data[topicId].title.replaceAll(' ','_')+'_'+qItem.id+'_drawing.png'); a.click(); });
+        penBtn.click();
+      }
+
+      topicArea.appendChild(ansWrap);
+
+      // focus main
+      topicArea.scrollIntoView({behavior:'smooth'});
+    }
+
+    // Build initial list for topic 1 and open first question automatically
+    function init(){
+      const filter = q('#topicFilter');
+      const filterBtn = q('#filterBtn');
+      filterBtn.addEventListener('click', ()=>{ buildListForTopic(Number(filter.value)); });
+
+      buildListForTopic(1);
+      // open first question of topic 1 by default
+      const firstQ = data[1].questions[0];
+      if(firstQ) openQuestion(1, firstQ.id);
+    }
+
+    init();
+
+    // Expose for debugging
+    window.__Y6Game = { data, buildListForTopic, openQuestion };
+  });
+  </script>
+</body>
+</html>
