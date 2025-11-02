@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y2 Science — Habitats Game (Week 5 & 6)</title>
+<style>
+  :root{--bg:#fffdf7;--panel:#ffffff;--muted:#334155;--accent:#2b8a3e;--accent2:#0ea5e9;--warn:#f59e0b;--shadow:0 8px 24px rgba(16,24,40,0.06);--font:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:var(--font);color:#0f172a}
+  .app{max-width:1100px;margin:18px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .panel{background:var(--panel);padding:12px;border-radius:12px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:12px}
+  .two{grid-template-columns:1fr 340px}
+  @media(max-width:980px){.two{grid-template-columns:1fr}}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--accent)}
+  select,input{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+  .option{background:#f8faf6;padding:10px;border-radius:8px;border:1px dashed #e6edf3;cursor:pointer}
+  .option.selected{background:var(--accent2);color:white}
+  .title{font-weight:700}
+  .hint{color:var(--muted);font-size:13px}
+  .score{font-weight:700;color:var(--accent)}
+  .canvas-wrap{background:#fff;padding:8px;border-radius:8px;border:1px dashed #e6edf3}
+  .dropzone{min-height:60px;padding:8px;border-radius:8px;border:2px dashed #cbd5e1;background:#f8fafc}
+  .chip{display:inline-block;padding:6px 10px;margin:6px;border-radius:999px;background:#fff;border:1px solid #e6edf3;cursor:grab}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y2 Science — Habitats Interactive</h1>
+      <div class="sub">Week 5 & 6: Malaysian habitats — group plants & animals • Eco & Islamic links included</div>
+    </div>
+    <div class="row">
+      <div class="panel">Score: <span id="score">0</span></div>
+      <button id="reset" class="ghost">Restart</button>
+    </div>
+  </header>
+
+  <main style="margin-top:14px" class="grid two">
+    <section class="panel" id="left">
+      <div class="title">Activity</div>
+      <div style="margin-top:10px" id="taskArea"></div>
+      <div style="margin-top:12px" class="row">
+        <button id="checkBtn">Check Answer</button>
+        <button id="nextBtn" class="ghost">Next</button>
+        <button id="hintBtn" class="ghost">Hint (-1)</button>
+      </div>
+      <div id="feedback" style="margin-top:10px" class="hint"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="title">Teacher Panel</div>
+      <div class="hint" style="margin-top:8px">Choose a topic and use Next to change the question. Start each lesson with a dua and link activities to the Islamic and Eco values shown below.</div>
+
+      <div style="margin-top:12px">
+        <label class="hint">Choose Topic</label>
+        <select id="topic" style="width:100%;margin-top:6px">
+          <option value="plants_group">Plants — Malaysian habitats</option>
+          <option value="plants_match">Plants — Identify & Match</option>
+          <option value="animals_group">Animals — Habitat grouping</option>
+          <option value="animals_match">Animals — Which habitat?</option>
+          <option value="garden_detective">Garden Detective — Checklist</option>
+          <option value="sound_sources">Sound — identify sources (Week 6)</option>
+        </select>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="title">Integration Links</div>
+        <ul class="hint" style="margin-top:6px">
+          <li><b>ISIC5</b> — Cause & consequence: habitats support life.</li>
+          <li><b>ECOL2</b> — Structure & function of ecosystems.</li>
+          <li><b>ISIC1</b> — Critical thinking, reasoning; students observe & classify.</li>
+          <li><b>ECOL1</b> — Interactions & inquiry — food chains & habitats.</li>
+        </ul>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="row"><button id="playDua" class="ghost">Play Dua (short)</button><button id="toggleSound" class="ghost">Sound: ON</button></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer style="margin-top:12px" class="hint">Tip: Encourage students to connect habitat features with how plants & animals survive. End with dua.</footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  // elements
+  const topicSel = document.getElementById('topic');
+  const taskArea = document.getElementById('taskArea');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const resetBtn = document.getElementById('reset');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const playDua = document.getElementById('playDua');
+  const toggleSound = document.getElementById('toggleSound');
+
+  // state
+  let score = 0; let soundOn = true; let current = null;
+  function setScore(n){ score = Math.max(0, n); scoreEl.textContent = score; }
+  function addScore(n){ setScore(score + n); }
+  function info(msg){ feedback.textContent = msg; }
+
+  // simple beep
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq=880,dur=0.08){ if(!soundOn) return; try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.2,audioCtx.currentTime+0.01); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur); o.stop(audioCtx.currentTime+dur+0.02);}catch(e){} }
+
+  // data sets
+  const plantHabitats = {
+    'Hibiscus': 'Garden',
+    'Pitcher plant': 'Peat swamp / Bog',
+    'Water lily': 'Freshwater (pond/rice field)',
+    'Nipah palm': 'Mangrove',
+    'Orchid': 'Forest (epiphyte)'
+  };
+  const animalHabitats = {
+    'Proboscis monkey': 'Mangrove / River',
+    'Hornbill': 'Forest',
+    'Clownfish': 'Ocean (coral reef)',
+    'Crocodile': 'River / Swamp',
+    'Tapir': 'Forest',
+    'Sea turtle': 'Ocean (beach & sea)'
+  };
+
+  // helpers
+  function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+
+  // renderers
+  function renderPlantsGroup(){ taskArea.innerHTML = '';
+    const title = document.createElement('div'); title.className='title'; title.textContent='Group these Malaysian plants into the correct habitat'; taskArea.appendChild(title);
+    const hint = document.createElement('div'); hint.className='hint'; hint.textContent='Drag the plant chips into the matching habitat boxes.'; taskArea.appendChild(hint);
+
+    const habitats = ['Garden','Peat swamp / Bog','Freshwater (pond/rice field)','Mangrove','Forest (epiphyte)'];
+    const container = document.createElement('div'); container.style.marginTop='10px';
+
+    // chips
+    const chipsWrap = document.createElement('div'); chipsWrap.style.margin='8px 0';
+    const plants = shuffle(Object.keys(plantHabitats));
+    plants.forEach(p=>{ const c = document.createElement('div'); c.className='chip'; c.draggable = true; c.textContent = p; c.dataset.name = p; chipsWrap.appendChild(c); });
+    container.appendChild(chipsWrap);
+
+    // drop zones
+    habitats.forEach(h=>{
+      const w = document.createElement('div'); w.style.marginTop='8px'; const label = document.createElement('div'); label.textContent = h; label.style.fontWeight='600'; w.appendChild(label);
+      const dz = document.createElement('div'); dz.className='dropzone'; dz.dataset.hab = h; dz.style.marginTop='6px'; dz.innerHTML = '<small class="hint">Drop plants here</small>'; w.appendChild(dz); container.appendChild(w);
+    });
+    taskArea.appendChild(container);
+
+    // drag events
+    taskArea.querySelectorAll('.chip').forEach(ch=>{
+      ch.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', ch.dataset.name); });
+    });
+    taskArea.querySelectorAll('.dropzone').forEach(dz=>{
+      dz.addEventListener('dragover', e=> e.preventDefault());
+      dz.addEventListener('drop', e=>{ e.preventDefault(); const name = e.dataTransfer.getData('text/plain'); if(!name) return; const el = Array.from(taskArea.querySelectorAll('.chip')).find(x=>x.dataset.name===name); if(!el) return; // move element into dropzone
+        // clone to allow reposition
+        const clone = el.cloneNode(true); clone.draggable = false; clone.style.cursor='default'; // mark
+        // prevent duplicates
+        if(Array.from(dz.querySelectorAll('.chip')).some(c=>c.textContent===name)) return;
+        // remove original
+        el.remove(); dz.appendChild(clone);
+      });
+    });
+
+    current = {type:'plants_group'};
+
+    checkBtn.onclick = ()=>{
+      // collect answers
+      const dzs = taskArea.querySelectorAll('.dropzone'); let correct=0; let total=Object.keys(plantHabitats).length;
+      // build map
+      dzs.forEach(dz=>{
+        const hab = dz.dataset.hab;
+        Array.from(dz.querySelectorAll('.chip')).forEach(c=>{ const p = c.textContent; if(plantHabitats[p] === hab) correct++; });
+      });
+      if(correct===total){ addScore(10); info('Excellent — all plants correctly grouped! +10 pts'); beep(); } else { addScore(Math.max(-1,-Math.floor((total-correct)/2))); info(`You grouped ${correct} of ${total} correctly.`); beep(220); }
+    };
+  }
+
+  function renderPlantsMatch(){ taskArea.innerHTML=''; const title = document.createElement('div'); title.className='title'; title.textContent='Which habitat does this plant belong to?'; taskArea.appendChild(title);
+    const plantList = shuffle(Object.keys(plantHabitats)); const p = plantList[0]; const correct = plantHabitats[p];
+    const q = document.createElement('div'); q.style.marginTop='8px'; q.innerHTML = `<div class="hint">Plant: <strong>${p}</strong></div>`; taskArea.appendChild(q);
+    const opts = shuffle([...new Set(Object.values(plantHabitats))]).slice(0,4);
+    if(!opts.includes(correct)) opts[ Math.floor(Math.random()*opts.length) ] = correct;
+    const grid = document.createElement('div'); grid.className='row'; grid.style.marginTop='10px';
+    opts.forEach(o=>{ const b=document.createElement('div'); b.className='option'; b.textContent=o; b.onclick=()=>{ grid.querySelectorAll('.option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }; grid.appendChild(b); });
+    taskArea.appendChild(grid);
+    current = {type:'plants_match', answer:correct, grid};
+    checkBtn.onclick = ()=>{ const sel = grid.querySelector('.option.selected'); if(!sel){ info('Choose an option'); return; } if(sel.textContent===current.answer){ addScore(4); info('Correct! +4 pts'); beep(); } else { addScore(-1); info('Not correct — try another or use Hint. (-1)'); beep(220);} };
+  }
+
+  function renderAnimalsGroup(){ taskArea.innerHTML=''; const title=document.createElement('div'); title.className='title'; title.textContent='Group these animals by habitat'; taskArea.appendChild(title);
+    const habitats = ['Forest','Mangrove / River','Ocean','River / Swamp'];
+    const chipsWrap = document.createElement('div'); chipsWrap.style.marginTop='8px'; const animals = shuffle(Object.keys(animalHabitats)); animals.forEach(a=>{ const c=document.createElement('div'); c.className='chip'; c.draggable=true; c.dataset.name=a; c.textContent=a; chipsWrap.appendChild(c); }); taskArea.appendChild(chipsWrap);
+    habitats.forEach(h=>{ const w=document.createElement('div'); w.style.marginTop='8px'; const label=document.createElement('div'); label.textContent=h; label.style.fontWeight='600'; w.appendChild(label); const dz=document.createElement('div'); dz.className='dropzone'; dz.dataset.hab=h; dz.style.marginTop='6px'; dz.innerHTML='<small class="hint">Drop animals here</small>'; w.appendChild(dz); taskArea.appendChild(w); });
+
+    // drag logic same as plants
+    taskArea.querySelectorAll('.chip').forEach(ch=> ch.addEventListener('dragstart', e=> e.dataTransfer.setData('text/plain', ch.dataset.name)));
+    taskArea.querySelectorAll('.dropzone').forEach(dz=>{ dz.addEventListener('dragover', e=> e.preventDefault()); dz.addEventListener('drop', e=>{ e.preventDefault(); const name = e.dataTransfer.getData('text/plain'); const el = Array.from(taskArea.querySelectorAll('.chip')).find(x=>x.dataset.name===name); if(!el) return; const clone = el.cloneNode(true); clone.draggable=false; if(Array.from(dz.querySelectorAll('.chip')).some(c=>c.textContent===name)) return; el.remove(); dz.appendChild(clone); }); });
+
+    current = {type:'animals_group'};
+    checkBtn.onclick = ()=>{ const dzs = taskArea.querySelectorAll('.dropzone'); let correct=0; let total=Object.keys(animalHabitats).length; dzs.forEach(dz=>{ const hab = dz.dataset.hab; Array.from(dz.querySelectorAll('.chip')).forEach(c=>{ const a = c.textContent; if(animalHabitats[a] === hab) correct++; }); }); if(correct===total){ addScore(10); info('Great — all animals correctly grouped! +10 pts'); beep(); } else { addScore(Math.max(-1,-Math.floor((total-correct)/2))); info(`You grouped ${correct} of ${total} correctly.`); beep(220); } };
+  }
+
+  function renderAnimalsMatch(){ taskArea.innerHTML=''; const title=document.createElement('div'); title.className='title'; title.textContent='Which habitat is this animal from?'; taskArea.appendChild(title);
+    const list = shuffle(Object.keys(animalHabitats)); const a = list[0]; const correct = animalHabitats[a]; const q = document.createElement('div'); q.className='hint'; q.style.marginTop='8px'; q.innerHTML = `Animal: <strong>${a}</strong>`; taskArea.appendChild(q);
+    const opts = shuffle([...new Set(Object.values(animalHabitats))]).slice(0,4); if(!opts.includes(correct)) opts[Math.floor(Math.random()*opts.length)]=correct;
+    const grid = document.createElement('div'); grid.className='row'; grid.style.marginTop='10px'; opts.forEach(o=>{ const b=document.createElement('div'); b.className='option'; b.textContent=o; b.onclick=()=>{ grid.querySelectorAll('.option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }; grid.appendChild(b); }); taskArea.appendChild(grid);
+    current = {type:'animals_match', answer:correct, grid};
+    checkBtn.onclick = ()=>{ const sel = grid.querySelector('.option.selected'); if(!sel){ info('Choose an option'); return; } if(sel.textContent===current.answer){ addScore(4); info('Correct! +4 pts'); beep(); } else { addScore(-1); info('Not correct — try again. (-1)'); beep(220);} };
+  }
+
+  function renderGardenDetective(){ taskArea.innerHTML=''; const title=document.createElement('div'); title.className='title'; title.textContent='Garden Detective — find healthy vs unhealthy plant'; taskArea.appendChild(title);
+    const instr=document.createElement('div'); instr.className='hint'; instr.style.marginTop='8px'; instr.textContent = 'Use the checklist to decide if the plant is healthy.'; taskArea.appendChild(instr);
+    const checklist = ['Leaves green','Leaves not droopy','Soil moist','Stem firm','No pests visible'];
+    const form = document.createElement('div'); form.style.marginTop='8px'; checklist.forEach(c=>{ const row=document.createElement('div'); row.className='row'; const cb=document.createElement('input'); cb.type='checkbox'; cb.id = 'cb_'+c.replace(/\s+/g,'_'); const label=document.createElement('label'); label.htmlFor=cb.id; label.style.marginLeft='6px'; label.textContent = c; row.appendChild(cb); row.appendChild(label); form.appendChild(row); }); taskArea.appendChild(form);
+    // teacher can tick based on observation; for game we'll simulate plant state randomly
+    const plantOk = Math.random()<0.6; // healthy probability
+    current = {type:'garden_detective', plantHealthy: plantOk};
+    const revealBtn = document.createElement('div'); revealBtn.style.marginTop='8px'; revealBtn.innerHTML = '<small class="hint">(Teacher tool) Click Check to evaluate checklist against a sample plant in class.</small>';
+    taskArea.appendChild(revealBtn);
+    checkBtn.onclick = ()=>{
+      const checked = Array.from(form.querySelectorAll('input[type=checkbox]')).filter(i=>i.checked).length;
+      // simple rule: if checked >=4 assume healthy
+      const predictedHealthy = checked>=4;
+      if(predictedHealthy === current.plantHealthy){ addScore(6); info(`Good observation — you ${predictedHealthy? 'correctly identified a healthy plant' : 'correctly identified an unhealthy plant'} (+6 pts)`); beep(); }
+      else { addScore(-1); info(`Observation mismatch. Discuss reasons: look at leaves, soil, and pests. (-1)`); beep(220); }
+    };
+  }
+
+  function renderSoundSources(){ taskArea.innerHTML=''; const title=document.createElement('div'); title.className='title'; title.textContent='Sources of Sound — classify'; taskArea.appendChild(title);
+    const hint=document.createElement('div'); hint.className='hint'; hint.style.marginTop='8px'; hint.textContent='Listen and choose whether the sound is natural or man-made.'; taskArea.appendChild(hint);
+    // we'll simulate with labels and optional audio beeps
+    const sounds = [ {label:'Bird chirping', type:'natural'}, {label:'Rain falling', type:'natural'}, {label:'Car horn', type:'man-made'}, {label:'Construction hammer', type:'man-made'} ];
+    const sample = sounds[Math.floor(Math.random()*sounds.length)];
+    const q = document.createElement('div'); q.style.marginTop='10px'; q.innerHTML = `<div class="hint">Sound: <strong>${sample.label}</strong></div>`; taskArea.appendChild(q);
+    const grid = document.createElement('div'); grid.className='row'; grid.style.marginTop='10px'; ['Natural','Man-made'].forEach(o=>{ const b=document.createElement('div'); b.className='option'; b.textContent=o; b.onclick=()=>{ grid.querySelectorAll('.option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }; grid.appendChild(b); }); taskArea.appendChild(grid);
+    current = {type:'sound', answer: sample.type==='natural' ? 'Natural' : 'Man-made'};
+    checkBtn.onclick = ()=>{ const sel = grid.querySelector('.option.selected'); if(!sel){ info('Choose Natural or Man-made'); return; } if(sel.textContent===current.answer){ addScore(4); info('Correct — discuss why this source is natural/man-made. +4 pts'); beep(); } else { addScore(-1); info('Not quite — discuss the features of the sound. (-1)'); beep(220); } };
+  }
+
+  // topic switch
+  function renderTopic(){ const t = topicSel.value; if(t==='plants_group') renderPlantsGroup(); else if(t==='plants_match') renderPlantsMatch(); else if(t==='animals_group') renderAnimalsGroup(); else if(t==='animals_match') renderAnimalsMatch(); else if(t==='garden_detective') renderGardenDetective(); else if(t==='sound_sources') renderSoundSources(); }
+
+  topicSel.addEventListener('change', ()=>{ renderTopic(); info(''); });
+  nextBtn.addEventListener('click', ()=>{ renderTopic(); info('New task ready'); });
+  resetBtn.addEventListener('click', ()=>{ if(confirm('Reset score and restart?')){ setScore(0); renderTopic(); info('Reset done'); } });
+  hintBtn.addEventListener('click', ()=>{ info('Hint shown — think about where the plant/animal normally grows.'); addScore(Math.max(-1, -1)); });
+  toggleSound.addEventListener('click', ()=>{ soundOn = !soundOn; toggleSound.textContent = 'Sound: ' + (soundOn? 'ON':'OFF'); });
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s = new SpeechSynthesisUtterance('Bismillah ar-Rahman ar-Rahim. O Allah, bless our learning.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); } else { alert('Dua: Bismillah.'); } });
+
+  // init
+  setScore(0); renderTopic(); info('Choose a topic and press Next to get another question.');
+
+  // expose for debug
+  window._Y2Science = {renderTopic, addScore};
+});
+</script>
+</body>
+</html>

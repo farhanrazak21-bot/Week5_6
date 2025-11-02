@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y3 Science — Plants Investigation Game</title>
+<style>
+  :root{--bg:#f7f7f7;--card:#ffffff;--muted:#52525b;--accent:#16a34a;--shadow:0 8px 20px rgba(0,0,0,0.06);--font:system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:#07263b}
+  .app{max-width:1100px;margin:18px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:flex-start}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .grid{display:grid;gap:14px}
+  .two{grid-template-columns:1fr 360px}
+  @media(max-width:980px){.two{grid-template-columns:1fr}}
+  .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:var(--shadow)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .ghost{background:transparent;border:1px solid #e6e6e6;color:var(--muted);padding:8px 10px;border-radius:8px}
+  select,input,textarea{padding:8px;border-radius:8px;border:1px solid #e6e6e6}
+  label.small{font-size:13px;color:var(--muted)}
+  .small{font-size:13px;color:var(--muted)}
+  canvas{background:white;border-radius:8px;border:1px solid #e6e6e6}
+  .table{width:100%;border-collapse:collapse}
+  .table td{padding:6px;border-bottom:1px solid #f1f1f1}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y3 Science — Plants Investigation Game</h1>
+      <div class="sub">Topic: Light & Plant Growth • Fair test, Observe, Record, Conclude • Integrated values shown in tasks</div>
+    </div>
+    <div class="row">
+      <div class="card small">Score: <b id="score">0</b></div>
+      <button id="reset" class="ghost">Reset</button>
+    </div>
+  </header>
+
+  <main class="grid two" style="margin-top:14px">
+    <section class="card" id="left">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <label class="small">Choose Activity</label><br/>
+          <select id="mode" style="min-width:260px;margin-top:6px">
+            <option value="intro">Introduction & Predict</option>
+            <option value="observe">Observe & Record (Measure)</option>
+            <option value="fairtest">Design a Fair Test</option>
+            <option value="chart">Plot Results (Bar chart)</option>
+            <option value="sketch">Sketch & Label (drawing)</option>
+            <option value="quiz">Quick Quiz</option>
+          </select>
+        </div>
+        <div class="small">Integrations:<br/>ISIC5 • ISPH4 • ECOL4</div>
+      </div>
+
+      <div id="taskArea" style="margin-top:12px"></div>
+
+      <div class="row" style="margin-top:12px">
+        <button id="check" class="btn">Check / Submit</button>
+        <button id="next" class="ghost">Next</button>
+        <button id="hint" class="ghost">Hint (-1)</button>
+      </div>
+
+      <div id="feedback" class="small" style="margin-top:10px"></div>
+    </section>
+
+    <aside class="card">
+      <div class="small"><b>Teacher Panel & Prompts</b></div>
+      <div class="small" style="margin-top:8px">Start each session with a short dua. Use "Hint" to support less able students. Encourage reflection: how does caring for plants show gratitude to Allah?</div>
+
+      <div style="margin-top:12px">
+        <div class="small"><b>Quick tools</b></div>
+        <div class="row" style="margin-top:8px">
+          <button id="playDua" class="ghost">Play Dua</button>
+          <button id="export" class="ghost">Export Data</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="small"><b>Progress</b></div>
+        <div id="progress" class="small" style="margin-top:6px">Complete activities to collect data and make a conclusion.</div>
+        <div id="dataSummary" style="margin-top:8px" class="small"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer style="margin-top:14px" class="small">Tips: Use real plants for long-term class project. Encourage fairness and accurate recording — this is part of amanah (responsibility).</footer>
+</div>
+
+<script>
+// Y3 Science — Plants Investigation Game
+// Robust DOM handling, no write/innerHTML errors, safe event attachments
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const modeSel = document.getElementById('mode');
+  const taskArea = document.getElementById('taskArea');
+  const checkBtn = document.getElementById('check');
+  const nextBtn = document.getElementById('next');
+  const hintBtn = document.getElementById('hint');
+  const resetBtn = document.getElementById('reset');
+  const scoreEl = document.getElementById('score');
+  const feedback = document.getElementById('feedback');
+  const playDua = document.getElementById('playDua');
+  const exportBtn = document.getElementById('export');
+  const dataSummary = document.getElementById('dataSummary');
+
+  let score = 0; let current = null; let records = [];
+
+  function setFeedback(msg){ feedback.textContent = msg || ''; }
+  function setScore(n){ score = Math.max(0,n); scoreEl.textContent = score; }
+  function addScore(n){ setScore(score + n); }
+
+  // Initial render
+  renderMode(modeSel.value);
+
+  modeSel.addEventListener('change', ()=>{ renderMode(modeSel.value); setFeedback(''); });
+
+  // ---------- Renderers ----------
+  function renderMode(mode){ taskArea.innerHTML = ''; current = {mode};
+    if(mode === 'intro') renderIntro();
+    else if(mode === 'observe') renderObserve();
+    else if(mode === 'fairtest') renderFairTest();
+    else if(mode === 'chart') renderChart();
+    else if(mode === 'sketch') renderSketch();
+    else if(mode === 'quiz') renderQuiz();
+  }
+
+  function renderIntro(){
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div style="font-weight:700">Introduction & Predict</div>
+      <div class="small" style="margin-top:6px">Look at the two pictures below. Discuss which plant will grow better after 5 days and why. Type your prediction.</div>
+    `;
+    const pics = document.createElement('div'); pics.style.marginTop='8px';
+    const healthy = document.createElement('div'); healthy.className='card'; healthy.style.marginRight='8px'; healthy.innerHTML = '<b>Healthy plant</b><div class="small">Green leaves, upright</div>';
+    const unhealthy = document.createElement('div'); unhealthy.className='card'; unhealthy.innerHTML = '<b>Unhealthy plant</b><div class="small">Pale leaves, droopy</div>';
+    pics.appendChild(healthy); pics.appendChild(unhealthy);
+    div.appendChild(pics);
+
+    const ta = document.createElement('textarea'); ta.placeholder = 'Write your prediction here (1-3 sentences)'; ta.style.width='100%'; ta.style.marginTop='10px'; ta.rows = 4; ta.id='predict_text';
+    div.appendChild(ta);
+
+    taskArea.appendChild(div);
+    current.answerType = 'text';
+  }
+
+  function renderObserve(){
+    const div = document.createElement('div');
+    div.innerHTML = '<div style="font-weight:700">Observe & Record</div><div class="small" style="margin-top:6px">Record daily heights (cm) for each plant. Add at least 3 measurements.</div>';
+    const table = document.createElement('table'); table.className='table'; table.style.marginTop='8px';
+    table.innerHTML = '<tr><td><b>Day</b></td><td><b>Plant A (with light)</b></td><td><b>Plant B (no light)</b></td></tr>';
+    for(let d=1; d<=5; d++){ const tr = document.createElement('tr'); tr.innerHTML = `<td>Day ${d}</td><td><input type="number" min="0" step="0.1" data-day="${d}" data-plant="A" class="rec" /></td><td><input type="number" min="0" step="0.1" data-day="${d}" data-plant="B" class="rec" /></td>`; table.appendChild(tr); }
+    div.appendChild(table);
+
+    const note = document.createElement('div'); note.className='small'; note.style.marginTop='8px'; note.textContent = 'Tip: Use a ruler to measure plant heights in cm. Leave blank days if not measured.';
+    div.appendChild(note);
+
+    taskArea.appendChild(div);
+    current.answerType = 'observe';
+  }
+
+  function renderFairTest(){
+    const div = document.createElement('div');
+    div.innerHTML = '<div style="font-weight:700">Design a Fair Test</div><div class="small" style="margin-top:6px">Choose variables to keep same and one variable to change (light). Fill the setup below.</div>';
+    const form = document.createElement('div'); form.style.marginTop='8px';
+    form.innerHTML = `
+      <label class="small">Seed type:</label><br/><input id="seed" placeholder="e.g. Bean seed" style="width:100%;margin-top:6px" />
+      <div style="height:8px"></div>
+      <label class="small">Soil type:</label><br/><input id="soil" placeholder="e.g. Garden soil" style="width:100%;margin-top:6px" />
+      <div style="height:8px"></div>
+      <label class="small">Watering schedule:</label><br/><input id="water" placeholder="e.g. 20 ml daily" style="width:100%;margin-top:6px" />
+      <div style="height:8px"></div>
+      <label class="small">Variable to change (choose one):</label><br/>
+      <select id="variable" style="width:100%;margin-top:6px"><option>Light</option><option>Water</option><option>Soil</option></select>
+    `;
+    div.appendChild(form);
+    taskArea.appendChild(div);
+    current.answerType = 'fairtest';
+  }
+
+  function renderChart(){
+    const div = document.createElement('div');
+    div.innerHTML = '<div style="font-weight:700">Plot Results</div><div class="small" style="margin-top:6px">Enter recorded data or use saved records to plot a bar chart comparing final heights.</div>';
+    const inputRow = document.createElement('div'); inputRow.className='row'; inputRow.style.marginTop='8px';
+    inputRow.innerHTML = '<label class="small">Final height Plant A (cm)</label><input id="finalA" type="number" step="0.1" style="width:120px" /><label class="small">Final height Plant B (cm)</label><input id="finalB" type="number" step="0.1" style="width:120px" />';
+    div.appendChild(inputRow);
+    const canvas = document.createElement('canvas'); canvas.width = 560; canvas.height = 240; canvas.style.marginTop='10px'; canvas.id='chartCanvas';
+    div.appendChild(canvas);
+    taskArea.appendChild(div);
+    current.answerType = 'chart';
+  }
+
+  function renderSketch(){
+    const div = document.createElement('div');
+    div.innerHTML = '<div style="font-weight:700">Sketch & Label</div><div class="small" style="margin-top:6px">Draw a plant and label sunlight, leaves and roots. Use the canvas below to sketch.</div>';
+    const canvas = document.createElement('canvas'); canvas.width = 560; canvas.height = 260; canvas.style.marginTop='10px'; canvas.id='sketchCanvas'; canvas.className='canvas-wrap';
+    const clear = document.createElement('button'); clear.textContent='Clear'; clear.className='ghost'; clear.style.marginTop='8px';
+    div.appendChild(canvas); div.appendChild(clear);
+    taskArea.appendChild(div);
+
+    // drawing set up
+    setTimeout(()=>{
+      const c = document.getElementById('sketchCanvas'); const ctx = c.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#14532d';
+      let drawing=false;
+      function pos(e){ const r=c.getBoundingClientRect(); return {x:(e.touches?e.touches[0].clientX:e.clientX)-r.left, y:(e.touches?e.touches[0].clientY:e.clientY)-r.top}; }
+      c.addEventListener('pointerdown', e=>{ drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+      c.addEventListener('pointermove', e=>{ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+      window.addEventListener('pointerup', ()=>{ if(drawing){ drawing=false; ctx.closePath(); } });
+      clear.onclick = ()=>{ ctx.clearRect(0,0,c.width,c.height); };
+    },50);
+    current.answerType='sketch';
+  }
+
+  function renderQuiz(){
+    const div = document.createElement('div'); div.innerHTML = '<div style="font-weight:700">Quick Quiz</div>';
+    const q1 = document.createElement('div'); q1.style.marginTop='8px'; q1.innerHTML = '<div class="small">Q1: Which of these is NOT a need of plants?</div>';
+    const opts = ['Sunlight','Soil','Music','Water']; const row = document.createElement('div'); row.className='row';
+    opts.forEach(o=>{ const b = document.createElement('div'); b.className='ghost option'; b.style.cursor='pointer'; b.textContent=o; b.onclick=()=>{ row.querySelectorAll('.option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }; row.appendChild(b); });
+    q1.appendChild(row);
+    div.appendChild(q1);
+    taskArea.appendChild(div);
+    current.answerType='quiz';
+  }
+
+  // ---------- Check / Submit ----------
+  checkBtn.addEventListener('click', ()=>{
+    if(!current) return setFeedback('Please choose an activity.');
+    setFeedback('');
+    if(current.answerType === 'text'){
+      const t = document.getElementById('predict_text').value.trim(); if(!t) return setFeedback('Write a prediction before submitting.'); records.push({type:'prediction', text:t}); addScore(3); setFeedback('Prediction saved. +3 pts'); updateSummary();
+    } else if(current.answerType === 'observe'){
+      // collect inputs
+      const inputs = taskArea.querySelectorAll('input.rec'); const dataA = [], dataB = [];
+      inputs.forEach(i=>{ const d = i.dataset.day; const p = i.dataset.plant; const v = i.value.trim(); if(v!==''){ if(p==='A') dataA.push(Number(v)); else dataB.push(Number(v)); } });
+      if(dataA.length < 1 || dataB.length < 1) return setFeedback('Enter at least one measurement for each plant.');
+      const finalA = dataA[dataA.length-1]; const finalB = dataB[dataB.length-1]; records.push({type:'observe', A:dataA, B:dataB}); addScore(6); setFeedback('Observations recorded. +6 pts'); updateSummary();
+    } else if(current.answerType === 'fairtest'){
+      const seed = document.getElementById('seed').value.trim() || '—'; const soil = document.getElementById('soil').value.trim()|| '—'; const water = document.getElementById('water').value.trim()|| '—'; const variable = document.getElementById('variable').value;
+      records.push({type:'fairtest', seed, soil, water, variable}); addScore(4); setFeedback('Fair test setup saved. +4 pts'); updateSummary();
+    } else if(current.answerType === 'chart'){
+      const a = document.getElementById('finalA').value.trim(); const b = document.getElementById('finalB').value.trim(); if(!a || !b) return setFeedback('Enter both final heights.'); plotBarChart(Number(a), Number(b)); records.push({type:'chart', A:Number(a), B:Number(b)}); addScore(5); setFeedback('Chart plotted. +5 pts'); updateSummary();
+    } else if(current.answerType === 'sketch'){
+      const c = document.getElementById('sketchCanvas'); const ctx = c.getContext('2d'); const pixels = ctx.getImageData(0,0,c.width,c.height).data; let nonEmpty=false; for(let i=3;i<pixels.length;i+=4){ if(pixels[i]!==0){ nonEmpty=true; break; } }
+      if(!nonEmpty) return setFeedback('Please draw something before submitting.'); records.push({type:'sketch', time:Date.now()}); addScore(4); setFeedback('Sketch submitted. +4 pts'); updateSummary();
+    } else if(current.answerType === 'quiz'){
+      const sel = taskArea.querySelector('.option.selected'); if(!sel) return setFeedback('Choose an option.'); if(sel.textContent === 'Music'){ addScore(5); setFeedback('Correct — plants do not need music. +5 pts'); } else { addScore(-1); setFeedback('Incorrect. Plants do not need music. (-1pt)'); }
+    } else { setFeedback('Nothing to submit for this activity.'); }
+    // disable check briefly
+    checkBtn.disabled = true; setTimeout(()=>{ checkBtn.disabled=false; },600);
+  });
+
+  nextBtn.addEventListener('click', ()=>{ renderMode(modeSel.value); setFeedback('New task ready.'); });
+  hintBtn.addEventListener('click', ()=>{ addScore(-1); // penalty for hint
+    if(!current) return setFeedback('Choose a task first.');
+    const h = {text:'Think about what plants need to make food (sunlight, water, air, soil).', observe:'Measure with a ruler from base to tip. Record numbers in cm.', fairtest:'Keep all conditions same except the one you change — this is a fair test.', chart:'Use final heights to compare which plant grew more.', sketch:'Draw big clear leaves and label sunlight.'};
+    setFeedback(h[current.mode] || h.text);
+  });
+
+  resetBtn.addEventListener('click', ()=>{ if(confirm('Reset game, score and records?')){ records=[]; setScore(0); dataSummary.textContent=''; renderMode(modeSel.value); setFeedback('Reset complete.'); } });
+
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s = new SpeechSynthesisUtterance('Bismillah. O Allah, make our learning beneficial.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); } else alert('Dua: Bismillah. May our learning be blessed.'); });
+
+  exportBtn.addEventListener('click', ()=>{ const txt = JSON.stringify(records, null, 2); const blob = new Blob([txt], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'plant-records.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); setFeedback('Data exported.'); });
+
+  // helper: plot simple bar chart
+  function plotBarChart(a,b){ const c = document.getElementById('chartCanvas'); if(!c) return; const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); const max = Math.max(a,b,10); const pad=40; const w=(c.width-2*pad)/4; // two bars
+    // axes
+    ctx.strokeStyle='#333'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad, c.height-pad); ctx.lineTo(c.width-pad, c.height-pad); ctx.stroke(); ctx.beginPath(); ctx.moveTo(pad, pad); ctx.lineTo(pad, c.height-pad); ctx.stroke();
+    // bars
+    const hA = (c.height-2*pad) * (a/max); const hB = (c.height-2*pad) * (b/max);
+    ctx.fillStyle='#16a34a'; ctx.fillRect(pad + w, c.height-pad - hA, w, hA);
+    ctx.fillStyle='#60a5fa'; ctx.fillRect(pad + 2*w + 20, c.height-pad - hB, w, hB);
+    ctx.fillStyle='#000'; ctx.font='14px sans-serif'; ctx.fillText('Plant A ('+a+' cm)', pad + w, c.height-pad + 18); ctx.fillText('Plant B ('+b+' cm)', pad + 2*w + 20, c.height-pad + 18);
+  }
+
+  function updateSummary(){ // brief summary of records
+    if(records.length===0){ dataSummary.textContent = 'No data yet.'; return; }
+    const counts = records.reduce((acc,r)=>{ acc[r.type] = (acc[r.type]||0)+1; return acc; },{});
+    dataSummary.textContent = 'Saved: ' + Object.entries(counts).map(([k,v])=>`${k}:${v}`).join(' | ');
+  }
+
+});
+</script>
+</body>
+</html>

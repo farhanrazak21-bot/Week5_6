@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y5 Science — Seed Germination Interactive</title>
+<style>
+:root{--bg:#fffdf6;--panel:#ffffff;--muted:#55606a;--accent:#2b7a78;--accent2:#ffb547;--ok:#16a34a;--shadow:0 8px 24px rgba(15,23,42,0.06);--font:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:linear-gradient(180deg,var(--bg),#f2fbf9);color:#072b30}
+.app{max-width:1100px;margin:18px auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+.controls{display:flex;gap:8px;align-items:center}
+.card{background:var(--panel);padding:12px;border-radius:12px;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tab{padding:8px 12px;border-radius:10px;border:1px solid rgba(7,43,48,0.06);background:#fff;cursor:pointer}
+.tab.active{border-color:var(--accent);box-shadow:0 6px 18px rgba(0,0,0,0.04)}
+.container{display:grid;gap:14px;margin-top:16px}
+@media(min-width:1000px){.container{grid-template-columns:1fr 360px}}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.big{font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+.button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+.button.ghost{background:transparent;color:var(--accent);border:2px solid rgba(7,43,48,0.06)}
+.small{font-size:13px;color:var(--muted)}
+.option{background:#f7fffb;padding:8px;border-radius:8px;border:1px dashed #e6f2ef;cursor:pointer}
+.canvas-wrap{background:#fff;padding:8px;border-radius:10px;border:1px dashed #e6edf3}
+.controls-top{display:flex;gap:8px;align-items:center}
+.kv{display:flex;flex-direction:column;gap:6px}
+label{font-size:13px}
+.print-area{display:none}
+/* accessibility larger font */
+.large-font body, .large-font *{font-size:1.12em}
+.high-contrast{background:#fff;color:#000}
+.easy-mode .hint,.easy-mode .small{font-size:16px}
+.checklist{list-style:none;padding:0;margin:0}
+.checklist li{padding:6px;border-bottom:1px solid #f0f4f3}
+.score{font-weight:700}
+.footer-note{font-size:12px;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y5 Science — Seed Germination Interactive</h1>
+      <div class="sub">Stages of germination • Fair test planner • Quiz • Printable worksheet • Audio prompts (English)</div>
+      <div class="tabs" style="margin-top:10px">
+        <button class="tab active" data-tab="intro">Intro & Tasks</button>
+        <button class="tab" data-tab="quiz">Quiz</button>
+        <button class="tab" data-tab="planner">Design Experiment</button>
+        <button class="tab" data-tab="draw">Draw & Observe</button>
+        <button class="tab" data-tab="print">Print Worksheet</button>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="card small">Score: <span id="score">0</span></div>
+      <div class="card small">Stars: <span id="stars">☆☆☆</span></div>
+      <div>
+        <button id="a11yBtn" class="button ghost">Aa+</button>
+        <button id="contrastBtn" class="button ghost">Contrast</button>
+        <button id="easyBtn" class="button ghost">Easy Mode</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <main id="main" class="card">
+      <div id="view"></div>
+    </main>
+
+    <aside class="card">
+      <div class="big">Audio & Controls</div>
+      <div class="small hint" style="margin-top:8px">Use the audio prompts to scaffold less-able students. Toggle large font or Easy Mode for simpler language.</div>
+      <div style="margin-top:12px" class="kv">
+        <label>Speak/Play:</label>
+        <div class="row"><button id="playIntro" class="button ghost">🔊 Listen Intro</button><button id="ttsNext" class="button ghost">🔊 Read Question</button></div>
+        <label style="margin-top:8px">Quick Actions:</label>
+        <div class="row"><button id="hintBtn" class="button ghost">Hint (-1)</button><button id="checkBtn" class="button">Check</button><button id="nextBtn" class="button secondary" style="background:var(--accent2);color:#072b30">Next</button></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Progress</div>
+        <div class="small" id="feedback" style="margin-top:6px"></div>
+        <div style="margin-top:8px"><button id="reset" class="button ghost">Reset</button></div>
+      </div>
+
+    </aside>
+  </div>
+
+  <footer class="card" style="margin-top:14px">
+    <div class="big">Reflections (Islamic & Eco)</div>
+    <div class="small hint" style="margin-top:8px">Each printable worksheet includes space for: "How does Allah's design show in this growth?" and "How can I care for the environment?"</div>
+  </footer>
+</div>
+
+<script>
+// Y5 Science — Seed Germination Interactive
+// Built with accessibility, audio prompts (English), printable export, experiment planner with auto checklist.
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  // DOM refs
+  const tabs = [...document.querySelectorAll('.tab')];
+  const view = document.getElementById('view');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const a11yBtn = document.getElementById('a11yBtn');
+  const contrastBtn = document.getElementById('contrastBtn');
+  const easyBtn = document.getElementById('easyBtn');
+  const playIntro = document.getElementById('playIntro');
+  const ttsNext = document.getElementById('ttsNext');
+  const hintBtn = document.getElementById('hintBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('reset');
+  const feedback = document.getElementById('feedback');
+
+  // state
+  let score = Number(localStorage.getItem('y5_score')||0);
+  let stars = 0; let questionIndex = 0; let currentTask = null; let easyMode=false; let large=false; let highContrast=false;
+  updateUI();
+
+  // speech helper (English)
+  function speak(text){ if(!('speechSynthesis' in window)) return; const s = new SpeechSynthesisUtterance(text); s.lang='en-US'; s.rate = easyMode?0.9:1; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); }
+
+  playIntro.addEventListener('click', ()=>{ speak('Welcome. This activity explores seed germination. You will plan an experiment, answer quiz questions, draw observations, and create a printable worksheet. Use the Listen buttons to hear questions slowly.'); });
+
+  // tabs
+  tabs.forEach(t=> t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); renderTab(t.dataset.tab); }));
+
+  // accessibility toggles
+  a11yBtn.addEventListener('click', ()=>{ large = !large; document.body.classList.toggle('large-font', large); a11yBtn.textContent = large? 'Aa-' : 'Aa+'; });
+  contrastBtn.addEventListener('click', ()=>{ highContrast = !highContrast; document.body.classList.toggle('high-contrast', highContrast); contrastBtn.textContent = highContrast? 'Normal' : 'Contrast'; });
+  easyBtn.addEventListener('click', ()=>{ easyMode = !easyMode; document.body.classList.toggle('easy-mode', easyMode); easyBtn.textContent = easyMode? 'Normal Mode':'Easy Mode'; });
+
+  // reset
+  resetBtn.addEventListener('click', ()=>{ if(confirm('Reset progress?')){ localStorage.removeItem('y5_score'); localStorage.removeItem('y5_planner'); localStorage.removeItem('y5_draw'); score=0; updateUI(); renderTab('intro'); } });
+
+  // helpers
+  function updateUI(){ scoreEl.textContent = score; stars = score>=40?3:score>=20?2:score>=8?1:0; starsEl.textContent = '★'.repeat(stars) + '☆'.repeat(3-stars); }
+  function addScore(n){ score = Math.max(0, score + n); localStorage.setItem('y5_score', score); updateUI(); }
+  function setFeedback(msg){ feedback.textContent = msg; }
+
+  // Render tabs
+  function renderTab(id){ view.innerHTML = ''; setFeedback(''); currentTask = null; if(id==='intro') renderIntro(); else if(id==='quiz') renderQuiz(); else if(id==='planner') renderPlanner(); else if(id==='draw') renderDraw(); else if(id==='print') renderPrint(); }
+
+  // ---------- INTRO & TASKS ----------
+  function renderIntro(){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<div class="big">Introduction & Tasks</div><div class="hint" style="margin-top:8px">Explore seed germination: watch, predict, plan and record. Use Listen to hear prompts.</div>`;
+    const tasks = document.createElement('ol'); tasks.style.marginTop='10px'; tasks.innerHTML = `
+      <li>Watch a short time-lapse of a seed sprouting (teacher shows video).</li>
+      <li>Record predictions: which seed will grow faster and why?</li>
+      <li>Design a fair test in the Design Experiment tab.</li>
+      <li>Observe and draw your plant in Draw & Observe.</li>
+      <li>Complete the Quiz to check understanding.</li>
+    `;
+    wrap.appendChild(tasks);
+
+    // quick mini-quiz buttons
+    const qWrap = document.createElement('div'); qWrap.style.marginTop='12px'; qWrap.innerHTML = '<div class="small">Mini questions (press Read Question then Check)</div>';
+    const q1 = document.createElement('div'); q1.style.marginTop='8px'; q1.innerHTML = `<div class="small">Q: Name two things a seed needs to germinate.</div><input id="mini1" placeholder="e.g., water, warmth" style="width:100%;margin-top:6px;padding:8px;border-radius:6px;border:1px solid #e6f2ef">`;
+    qWrap.appendChild(q1);
+    wrap.appendChild(qWrap);
+
+    view.appendChild(wrap);
+
+    ttsNext.onclick = ()=>{ speak('Mini question. Name two things a seed needs to germinate.'); };
+
+    checkBtn.onclick = ()=>{
+      const ans = (document.getElementById('mini1').value||'').toLowerCase(); if(!ans){ setFeedback('Please type a short answer.'); return; }
+      const ok = (ans.includes('water') || ans.includes('warm')) && (ans.includes('warm') || ans.includes('light') || ans.includes('air') || ans.includes('water'));
+      if(ok){ addScore(3); setFeedback('Good — includes key factors. +3 pts'); speak('Good work.'); } else { addScore(-1); setFeedback('Missing some factors. Try including water and warmth or light. (-1)'); speak('Try again.'); }
+    };
+  }
+
+  // ---------- QUIZ ----------
+  function renderQuiz(){
+    const wrap = document.createElement('div'); wrap.innerHTML = `<div class="big">Quiz — Seed Germination</div><div class="hint" style="margin-top:8px">10 short questions. Use Listen to hear each question.</div>`;
+    const quiz = generateQuizQuestions();
+    questionIndex = 0;
+
+    const qBox = document.createElement('div'); qBox.id='qBox'; qBox.style.marginTop='12px'; wrap.appendChild(qBox);
+    view.appendChild(wrap);
+
+    function showQ(){ qBox.innerHTML=''; const q = quiz[questionIndex]; currentTask = q; const prompt = document.createElement('div'); prompt.className='small'; prompt.textContent = `Q${questionIndex+1}: ${q.q}`; qBox.appendChild(prompt);
+      const listen = document.createElement('div'); listen.style.marginTop='6px'; const lbtn = document.createElement('button'); lbtn.className='button ghost'; lbtn.textContent='🔊 Listen'; lbtn.onclick=()=>speak(q.q); listen.appendChild(lbtn); qBox.appendChild(listen);
+      if(q.type==='mc'){
+        const grid = document.createElement('div'); grid.style.marginTop='8px'; q.opts.forEach(opt=>{ const b=document.createElement('div'); b.className='option'; b.style.marginTop='6px'; b.textContent = opt; b.onclick = ()=>{ grid.querySelectorAll('.option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }; grid.appendChild(b); }); qBox.appendChild(grid);
+      } else if(q.type==='short'){
+        const inp = document.createElement('input'); inp.style.width='100%'; inp.id='short_in'; inp.placeholder='Type short answer here'; inp.style.marginTop='8px'; qBox.appendChild(inp);
+      } else if(q.type==='sequence'){
+        // draggable sequence
+        const pool = document.createElement('div'); pool.style.marginTop='8px'; pool.className='row'; q.items.forEach(item=>{ const d=document.createElement('div'); d.className='option'; d.draggable=true; d.textContent=item; d.style.cursor='grab'; d.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', item); }); pool.appendChild(d); }); const target = document.createElement('div'); target.style.minHeight='80px'; target.style.marginTop='8px'; target.style.padding='8px'; target.style.border='1px dashed #e6f2ef'; target.id='seqTarget'; target.addEventListener('dragover', (e)=>e.preventDefault()); target.addEventListener('drop', (e)=>{ const v=e.dataTransfer.getData('text/plain'); const el=document.createElement('div'); el.className='option'; el.textContent=v; el.style.marginTop='6px'; target.appendChild(el); }); qBox.appendChild(pool); qBox.appendChild(target);
+      }
+    }
+
+    showQ();
+
+    ttsNext.onclick = ()=>{ if(currentTask) speak(currentTask.q); };
+
+    checkBtn.onclick = ()=>{
+      if(!currentTask) return; const q=currentTask; if(q.type==='mc'){ const sel = view.querySelector('#qBox .option.selected'); if(!sel){ setFeedback('Choose an option.'); return; } if(sel.textContent===q.a){ addScore(4); setFeedback('Correct! +4 pts'); } else { addScore(-1); setFeedback('Incorrect. (-1)'); }
+      } else if(q.type==='short'){ const val=(document.getElementById('short_in')||{}).value||''; if(!val){ setFeedback('Type an answer.'); return; } if(q.accept.some(a=> val.toLowerCase().includes(a))){ addScore(4); setFeedback('Good answer. +4 pts'); } else { addScore(-1); setFeedback('Try to include key words like water or warmth. (-1)'); }
+      } else if(q.type==='sequence'){ const target = document.getElementById('seqTarget'); const items = Array.from(target.querySelectorAll('.option')).map(n=>n.textContent); if(items.length!==q.items.length){ setFeedback('Place all items in order.'); return; } const ok = items.join('|')===q.a.join('|'); if(ok){ addScore(5); setFeedback('Correct order! +5 pts'); } else { addScore(-1); setFeedback('Order not correct. Try again. (-1)'); }
+      }
+      // next question
+      questionIndex++; if(questionIndex < quiz.length){ setTimeout(()=>{ showQ(); },600); } else { setFeedback('Quiz complete — well done!'); }
+    };
+  }
+
+  function generateQuizQuestions(){
+    // mix of MC, short answer, sequence; 10 items
+    return [
+      {type:'mc', q:'Which two conditions does a seed need most to begin germination?', opts:['Light and soil','Water and warmth','Salt and cold','Wind and space'], a:'Water and warmth'},
+      {type:'short', q:'Write one reason why sunlight helps plants (short).', accept:['energy','photosynth','food','photosynthesis']},
+      {type:'mc', q:'What part grows first from a germinating seed?', opts:['Shoot','Leaf','Root','Flower'], a:'Root'},
+      {type:'mc', q:'Which of these is a fair test design?', opts:['Change water and light each time','Keep everything same except one variable','Change all factors','Use different seeds and pots randomly'], a:'Keep everything same except one variable'},
+      {type:'short', q:'Give one eco action to protect plants (e.g., don\'t waste water).', accept:['water','reuse','plant','protect','save']},
+      {type:'sequence', q:'Place the stages in order (drag each):', items:['Shoot emerges','Seed','Root','Seedling'], a:['Seed','Root','Shoot emerges','Seedling']},
+      {type:'mc', q:'If a seed has no water, what will most likely happen?', opts:['Grow faster','Stay the same','Not germinate','Turn into a tree quickly'], a:'Not germinate'},
+      {type:'short', q:'Name one thing we should keep the same in a fair test.', accept:['soil','water','pots','seed','temperature']},
+      {type:'mc', q:'Which shows respect for Allah\'s creation?', opts:['Pluck many plants','Care for and water plants','Burn leaves','Ignore garden'], a:'Care for and water plants'},
+      {type:'short', q:'How does knowing about seeds help us as responsible people? (use one word)', accept:['care','protect','help','stewardship']}
+    ];
+  }
+
+  // ---------- PLANNER (Design Experiment) ----------
+  function renderPlanner(){
+    view.innerHTML = '';
+    const title = document.createElement('div'); title.className='big'; title.textContent='Design Experiment — Fair Test Planner'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.style.marginTop='8px'; hint.textContent='Choose one independent variable to test. Planner will generate materials checklist.'; view.appendChild(hint);
+
+    const form = document.createElement('div'); form.style.marginTop='12px';
+    form.innerHTML = `
+      <label>Choose variable to test:</label>
+      <select id="varSel" style="width:100%;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #e6f2ef">
+        <option value="water">Water (with / without)</option>
+        <option value="light">Light (sunlight / dark)</option>
+        <option value="warmth">Warmth (warm / cool)</option>
+      </select>
+      <div style="margin-top:10px" class="small">Number of seeds per group: <input id="numSeeds" type="number" value="5" min="1" style="width:80px;padding:6px;border-radius:6px;border:1px solid #e6f2ef"></div>
+      <div style="margin-top:10px" class="small">Notes: <textarea id="planNotes" placeholder="Hypothesis and notes" style="width:100%;height:80px;padding:8px;border-radius:6px;border:1px solid #e6f2ef"></textarea></div>
+    `;
+    view.appendChild(form);
+
+    const checklistWrap = document.createElement('div'); checklistWrap.style.marginTop='12px'; checklistWrap.innerHTML = '<div class="big">Materials Checklist</div><ul id="chk" class="checklist"></ul>';
+    view.appendChild(checklistWrap);
+
+    const actions = document.createElement('div'); actions.style.marginTop='10px'; const gen = document.createElement('button'); gen.className='button'; gen.textContent='Generate Checklist'; actions.appendChild(gen);
+    const save = document.createElement('button'); save.className='button ghost'; save.style.marginLeft='8px'; save.textContent='Save Plan'; actions.appendChild(save);
+    const printBtn = document.createElement('button'); printBtn.className='button ghost'; printBtn.style.marginLeft='8px'; printBtn.textContent='Print Checklist'; actions.appendChild(printBtn);
+    view.appendChild(actions);
+
+    function genChecklist(){ const varSel = document.getElementById('varSel').value; const n = Number(document.getElementById('numSeeds').value||5); const items = ['Plastic cups or small pots','Cotton wool or tissue','Seeds (bean or green gram)','Water (measuring cup)','Labels and marker','Notebook / observation sheet','Ruler','Tray to keep cups']; if(varSel==='warmth') items.push('Warm place (e.g., near window)'); if(varSel==='light') items.push('Dark cupboard or box for control'); if(varSel==='water') items.push('Spray bottle for controlled watering'); // render
+      const ul = document.getElementById('chk'); ul.innerHTML=''; items.forEach(it=>{ const li=document.createElement('li'); li.innerHTML = `<label><input type="checkbox" data-item="${it}"> ${it}</label>`; ul.appendChild(li); }); // add count info
+      const countLi = document.createElement('li'); countLi.style.fontStyle='italic'; countLi.textContent = `Seeds per group: ${n} — Total seeds needed: ${n*2}`; ul.appendChild(countLi);
+      // save in localStorage
+      const plan = {variable:varSel, seeds:n, items:items, notes:document.getElementById('planNotes').value}; localStorage.setItem('y5_planner', JSON.stringify(plan)); setFeedback('Checklist generated and saved locally.'); }
+
+    gen.addEventListener('click', genChecklist);
+    save.addEventListener('click', ()=>{ const plan = {variable:document.getElementById('varSel').value, seeds:Number(document.getElementById('numSeeds').value||5), notes:document.getElementById('planNotes').value}; localStorage.setItem('y5_planner', JSON.stringify(plan)); setFeedback('Plan saved.'); });
+    printBtn.addEventListener('click', ()=>{ window.print(); });
+
+    // auto-generate if saved
+    const saved = JSON.parse(localStorage.getItem('y5_planner')||'null'); if(saved){ document.getElementById('varSel').value = saved.variable || 'water'; document.getElementById('numSeeds').value = saved.seeds || 5; document.getElementById('planNotes').value = saved.notes || ''; genChecklist(); }
+  }
+
+  // ---------- DRAW & OBSERVE ----------
+  function renderDraw(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Draw & Observe — Sketch your plant'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.style.marginTop='8px'; hint.textContent='Use the canvas to draw a plant and write observations. Audio prompt available.'; view.appendChild(hint);
+
+    const wrap=document.createElement('div'); wrap.style.marginTop='12px';
+    wrap.innerHTML = `
+      <div class="canvas-wrap"><canvas id="sketch" width="560" height="260" style="background:#fff;border-radius:6px;border:1px solid #eef7f5"></canvas></div>
+      <div style="margin-top:8px" class="row"><button id="clearCanvas" class="button ghost">Clear</button><button id="saveDraw" class="button">Save Drawing</button><button id="ttsObs" class="button ghost">🔊 Read Prompt</button></div>
+      <div style="margin-top:10px"><label>Observations / Notes:</label><textarea id="obsNotes" style="width:100%;height:100px;padding:8px;border-radius:6px;border:1px solid #e6f2ef;margin-top:6px"></textarea></div>
+    `;
+    view.appendChild(wrap);
+
+    const canvas = document.getElementById('sketch'); const ctx = canvas.getContext('2d'); ctx.lineWidth=3; ctx.strokeStyle='#2b7a78'; ctx.lineCap='round'; let drawing=false;
+    function start(e){ drawing=true; ctx.beginPath(); const r=canvas.getBoundingClientRect(); const x = (e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; ctx.moveTo(x,y);} function move(e){ if(!drawing) return; const r=canvas.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; ctx.lineTo(x,y); ctx.stroke(); } function end(){ drawing=false; ctx.closePath(); }
+    canvas.addEventListener('pointerdown', start); canvas.addEventListener('pointermove', move); window.addEventListener('pointerup', end);
+    document.getElementById('clearCanvas').addEventListener('click', ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); });
+
+    document.getElementById('saveDraw').addEventListener('click', ()=>{
+      // save dataURL and notes
+      const data = {img:canvas.toDataURL(), notes: document.getElementById('obsNotes').value || ''}; localStorage.setItem('y5_draw', JSON.stringify(data)); setFeedback('Drawing & notes saved locally.'); addScore(6);
+    });
+
+    document.getElementById('ttsObs').addEventListener('click', ()=>{ speak('Observe your plant carefully. Draw its leaves, stem, and note its colour, height and condition. Write at least one observation.'); });
+  }
+
+  // ---------- PRINT / WORKSHEET ----------
+  function renderPrint(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Printable Worksheet — Summary'; view.appendChild(title);
+    const wrap=document.createElement('div'); wrap.style.marginTop='12px';
+    // populate from localStorage
+    const plan = JSON.parse(localStorage.getItem('y5_planner')||'null'); const draw = JSON.parse(localStorage.getItem('y5_draw')||'null');
+    wrap.innerHTML = `
+      <div class="card" style="padding:12px">
+        <div><b>Student Name:</b> ____________________</div>
+        <div style="margin-top:8px"><b>Experiment Plan:</b> ${plan?('Variable: '+plan.variable+', Seeds per group: '+plan.seeds):'[Not saved]'}</div>
+        <div style="margin-top:8px"><b>Hypothesis / Notes:</b><div style="margin-top:6px">${plan?plan.notes:'[Not saved]'}</div></div>
+        <div style="margin-top:8px"><b>Observations:</b><div style="margin-top:6px">${draw?draw.notes:'[No observations saved]'}</div></div>
+        <div style="margin-top:8px"><b>Drawing:</b></div>
+        <div id="printImg" style="margin-top:6px"></div>
+        <div style="margin-top:12px"><b>Islamic Reflection:</b><div style="margin-top:6px">How does Allah's design show in this growth? ____________________________</div></div>
+        <div style="margin-top:8px"><b>Eco Reflection:</b><div style="margin-top:6px">How can I care for the environment? _______________________________</div></div>
+        <div style="margin-top:12px"><button id="doPrint" class="button">🖨️ Print Worksheet</button></div>
+      </div>
+    `;
+    view.appendChild(wrap);
+    if(draw && draw.img){ const imgWrap = document.getElementById('printImg'); const img = document.createElement('img'); img.src = draw.img; img.style.maxWidth='100%'; img.style.border='1px solid #eef7f5'; imgWrap.appendChild(img); }
+    document.getElementById('doPrint').addEventListener('click', ()=>{ window.print(); });
+  }
+
+  // initial
+  renderTab('intro');
+
+  // expose some helpers for teacher console
+  window._Y5Science = {addScore, renderTab, speak};
+
+  // small hint handler
+  hintBtn.addEventListener('click', ()=>{ if(!currentTask){ setFeedback('Hints: Think about water, warmth, light, and what stays the same in a fair test.'); } else { setFeedback('Hint: Break the question into small parts.'); } addScore(-1); });
+
+});
+</script>
+</body>
+</html>

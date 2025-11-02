@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y6 Science — Week 5 & 6 Interactive</title>
+<style>
+:root{--bg:#ffffff;--panel:#fff;--muted:#5b6b76;--accent:#0f6efd;--accent2:#10b981;--warn:#f59e0b;--shadow:0 8px 24px rgba(15,23,42,0.06);--font:Inter,system-ui,Segoe UI,Roboto,Arial}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:linear-gradient(180deg,#fff,#f7fafc);color:#0b1724}
+.app{max-width:1100px;margin:18px auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tab{background:var(--panel);border:1px solid rgba(11,23,36,0.06);padding:8px 12px;border-radius:10px;cursor:pointer}
+.tab.active{box-shadow:var(--shadow);border-color:var(--accent)}
+.container{display:grid;gap:16px;margin-top:16px}
+@media(min-width:1000px){.container{grid-template-columns:1fr 360px}}
+.card{background:var(--panel);padding:14px;border-radius:12px;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.big{font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+.button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+.button.ghost{background:transparent;color:var(--accent);border:2px solid rgba(11,23,36,0.06)}
+.button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+input,select,textarea{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+.progress{height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
+.option{background:#fbfcfd;padding:10px;border-radius:10px;border:1px dashed #e6edf3;cursor:pointer;text-align:center}
+.canvas-wrap{background:#fff;padding:8px;border-radius:10px;border:1px dashed #e6edf3}
+.small{font-size:13px;color:var(--muted)}
+.controls{display:flex;gap:8px;align-items:center}
+.material-list{list-style:disc;margin:8px 0 0 20px}
+.large-font{font-size:18px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div>
+      <h1>Y6 Science — Week 5 & 6 Interactive</h1>
+      <div class="sub">Conductivity • States of matter (melting/boiling/evaporation) • Gases • Experiments — with Islamic & Eco reflections</div>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="conductivity">Conductivity (Heat & Electricity)</button>
+        <button class="tab" data-tab="melting">Melting & Freezing</button>
+        <button class="tab" data-tab="boiling">Boiling & Evaporation</button>
+        <button class="tab" data-tab="gases">Gases</button>
+        <button class="tab" data-tab="planner">Design Experiment (Planner)</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card small">Score: <b id="score">0</b></div>
+      <div class="card small">Stars: <span id="stars">☆☆☆</span></div>
+      <div class="controls">
+        <button id="fontBtn" class="button ghost">Large font</button>
+        <button id="duaBtn" class="button ghost">Play Dua</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <main id="main" class="card">
+      <div id="view"></div>
+    </main>
+
+    <aside class="card">
+      <div class="big">Teacher Panel & Prompts</div>
+      <div class="small hint" style="margin-top:8px">Start with a short dua. Use hints for less-able students. Use the Planner to auto-create materials checklist and printable worksheet.</div>
+      <div style="margin-top:12px">
+        <div class="row">
+          <button id="hintBtn" class="button ghost">Hint (-1)</button>
+          <button id="checkBtn" class="button">Check</button>
+          <button id="nextBtn" class="button secondary">Next</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="small">
+        <div><b>Progress</b></div>
+        <div class="progress" style="margin-top:6px"><i id="prog"></i></div>
+        <div id="feedback" style="margin-top:8px"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Quick Reflections</div>
+        <div class="small" style="margin-top:6px">Islamic: <span id="islamicRef">Remember Allah's wisdom in creation — use knowledge responsibly.</span></div>
+        <div class="small" style="margin-top:6px">Eco: <span id="ecoRef">Think about energy efficiency and avoiding waste.</span></div>
+      </div>
+
+    </aside>
+  </div>
+
+  <footer style="margin-top:12px;color:var(--muted);font-size:13px">Tip: Use the Planner to create a printable worksheet for students, and enable audio prompts for less-able learners.</footer>
+</div>
+
+<script>
+// Safe DOM load
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Elements
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const view = document.getElementById('view');
+  const hintBtn = document.getElementById('hintBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const prog = document.getElementById('prog');
+  const feedback = document.getElementById('feedback');
+  const fontBtn = document.getElementById('fontBtn');
+  const duaBtn = document.getElementById('duaBtn');
+
+  // state
+  let score = 0; let stars = 0; let progress = 0; let current = null; let largeFont = false;
+
+  function updateUI(){ scoreEl.textContent = score; starsEl.textContent = '★'.repeat(stars) + '☆'.repeat(3-stars); prog.style.width = progress + '%'; }
+  function addScore(n){ score = Math.max(0, score + n); stars = score>=40?3:score>=25?2:score>=10?1:0; updateUI(); }
+  function setFeedback(msg){ feedback.textContent = msg || ''; }
+
+  // Audio helper
+  function speak(text){ if('speechSynthesis' in window){ const u=new SpeechSynthesisUtterance(text); u.lang='en-GB'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } }
+
+  // Tab handler
+  tabs.forEach(t=> t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); renderTab(t.dataset.tab); }));
+
+  // Renderers
+  function renderTab(id){ current = null; setFeedback(''); checkBtn.disabled=false; nextBtn.disabled=false; if(id==='conductivity') renderConductivity(); else if(id==='melting') renderMelting(); else if(id==='boiling') renderBoiling(); else if(id==='gases') renderGases(); else if(id==='planner') renderPlanner(); }
+
+  // ---------- Conductivity ----------
+  function renderConductivity(){ view.innerHTML = '';
+    const title = document.createElement('div'); title.className='big'; title.textContent='Conductivity — Heat & Electricity'; view.appendChild(title);
+    const intro = document.createElement('div'); intro.className='small hint'; intro.style.marginTop='8px'; intro.textContent = 'Predict which materials conduct heat or electricity. Use the interactive chart and match items.'; view.appendChild(intro);
+
+    // material cards
+    const materials = ['Copper (wire)','Aluminium foil','Steel spoon','Plastic spoon','Wooden stick','Rubber','Glass','Water (tap)'];
+    const grid = document.createElement('div'); grid.style.marginTop='12px'; grid.className='row';
+    materials.forEach(name=>{
+      const b = document.createElement('div'); b.className='option'; b.style.minWidth='140px'; b.textContent = name; b.onclick = ()=>{ b.classList.toggle('selected'); };
+      grid.appendChild(b);
+    });
+    view.appendChild(grid);
+
+    // two buckets
+    const buckets = document.createElement('div'); buckets.style.marginTop='14px'; buckets.innerHTML = '<div class="small">Drag selections into the correct bucket: <b>Conductor</b> or <b>Insulator</b> (click to toggle selection, then press Assign).</div>';
+    const btnRow = document.createElement('div'); btnRow.className='row'; btnRow.style.marginTop='8px';
+    const assignBtn = document.createElement('button'); assignBtn.className='button ghost'; assignBtn.textContent='Assign Selected to Conductor';
+    const assignIns = document.createElement('button'); assignIns.className='button ghost'; assignIns.textContent='Assign Selected to Insulator';
+    btnRow.appendChild(assignBtn); btnRow.appendChild(assignIns);
+    buckets.appendChild(btnRow);
+
+    const listWrap = document.createElement('div'); listWrap.style.marginTop='10px'; listWrap.innerHTML = '<div style="display:flex;gap:10px"><div style="flex:1"><b>Conductors</b><ul id="cond" class="material-list"></ul></div><div style="flex:1"><b>Insulators</b><ul id="ins" class="material-list"></ul></div></div>';
+    buckets.appendChild(listWrap);
+    view.appendChild(buckets);
+
+    // correct sets
+    const correctCond = new Set(['Copper (wire)','Aluminium foil','Steel spoon','Water (tap)']);
+
+    assignBtn.addEventListener('click', ()=>{ const sel = grid.querySelectorAll('.option.selected'); if(!sel.length){ setFeedback('Select items first (click cards).'); return; } sel.forEach(s=>{ document.getElementById('cond').appendChild(createLi(s.textContent)); s.remove(); }); setFeedback('Assigned to Conductors.'); });
+    assignIns.addEventListener('click', ()=>{ const sel = grid.querySelectorAll('.option.selected'); if(!sel.length){ setFeedback('Select items first (click cards).'); return; } sel.forEach(s=>{ document.getElementById('ins').appendChild(createLi(s.textContent)); s.remove(); }); setFeedback('Assigned to Insulators.'); });
+
+    function createLi(text){ const li = document.createElement('li'); li.textContent = text; return li; }
+
+    current = {type:'conductivity', grid, correctCond};
+
+    checkBtn.onclick = ()=>{
+      const cond = Array.from(document.getElementById('cond').children).map(li=>li.textContent);
+      const ins = Array.from(document.getElementById('ins').children).map(li=>li.textContent);
+      // compare — simple scoring
+      let correct=0, total=cond.length+ins.length;
+      cond.forEach(c=>{ if(current.correctCond.has(c)) correct++; });
+      ins.forEach(i=>{ if(!current.correctCond.has(i)) correct++; });
+      if(total===0){ setFeedback('Assign items to buckets before checking.'); return; }
+      const pct = Math.round(correct/total*100);
+      if(pct===100){ addScore(8); setFeedback('Excellent — all correct! +8 pts'); progressAdd(20); } else { addScore(Math.max(-2, Math.floor((pct-100)/10))); setFeedback('Score: '+pct+'% — review the misplaced items.'); }
+    };
+  }
+
+  // ---------- Melting & Freezing ----------
+  function renderMelting(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Melting & Freezing — Observations'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.style.marginTop='8px'; hint.textContent = 'Predict and record melting observations. Use the virtual thermometer and timeline.'; view.appendChild(hint);
+
+    // prediction
+    const predWrap = document.createElement('div'); predWrap.style.marginTop='12px'; predWrap.innerHTML = '<div class="small">Prediction: What will happen to an ice cube left at room temperature? <br/><textarea id="pred" rows="3" style="width:100%" placeholder="Type your prediction..."></textarea></div>';
+    view.appendChild(predWrap);
+
+    // virtual thermometer & timeline
+    const thermo = document.createElement('div'); thermo.style.marginTop='12px'; thermo.innerHTML = '<div style="display:flex;gap:12px"><div style="width:120px"><div id="thermoBar" style="height:180px;width:36px;background:#e6f2ff;border-radius:6px;position:relative"><div id="thermoFill" style="position:absolute;bottom:0;left:0;right:0;height:0;background:linear-gradient(180deg,#60a5fa,#3b82f6);border-radius:4px"></div></div></div><div style="flex:1"><b>Timeline</b><div id="timeline" class="small" style="margin-top:6px">Start: 0s — Ice solid. Use Start Timer to simulate and watch temperature rise.</div><div style="margin-top:8px" class="row"><button id="startTimer" class="button">Start Timer</button><button id="stopTimer" class="button ghost">Stop</button><button id="resetTimer" class="button secondary">Reset</button></div></div></div>';
+    view.appendChild(thermo);
+
+    // results table
+    const tableWrap = document.createElement('div'); tableWrap.style.marginTop='12px'; tableWrap.innerHTML = '<div class="small">Record observations (time in s and approx temp °C):</div><div style="margin-top:8px"><table id="recTable" style="width:100%"><tr><th>Time (s)</th><th>Temp (°C)</th><th>Note</th></tr></table></div>';
+    view.appendChild(tableWrap);
+
+    let timer=null, t=0;
+    const thermoFill = document.getElementById('thermoFill'); const timeline = document.getElementById('timeline'); const recTable = document.getElementById('recTable');
+    document.getElementById('startTimer').addEventListener('click', ()=>{
+      if(timer) return; timer = setInterval(()=>{ t+=5; // every 5s increment
+        // simulate temp: start -5°C -> 0°C plateau then rise to 20°C
+        let temp; if(t<=60) temp = -5 + (t/60)*5; else if(t<=180) temp = 0; else temp = Math.min(20, (t-180)/10);
+        const pct = Math.min(100, Math.max(0, (temp+5)/25*100)); thermoFill.style.height = pct+'%'; timeline.textContent = 'Time: '+t+'s — Temp: '+temp.toFixed(1)+'°C'; addRecord(t,temp.toFixed(1),(temp<=0?'solid/partly melt':'liquid')); if(t>300) clearInterval(timer);
+      },500); setFeedback('Timer started — simulation running.');
+    });
+    document.getElementById('stopTimer').addEventListener('click', ()=>{ if(timer){ clearInterval(timer); timer=null; setFeedback('Timer stopped.'); }});
+    document.getElementById('resetTimer').addEventListener('click', ()=>{ if(timer){ clearInterval(timer); timer=null; } t=0; thermoFill.style.height='0%'; timeline.textContent='Start: 0s — Ice solid.'; recTable.querySelectorAll('tr.record')?.forEach(n=>n.remove()); setFeedback('Reset complete.'); });
+
+    function addRecord(time,temp,note){ const tr=document.createElement('tr'); tr.className='record'; tr.innerHTML = '<td>'+time+'</td><td>'+temp+'</td><td>'+note+'</td>'; recTable.appendChild(tr); }
+
+    current = {type:'melting'};
+
+    checkBtn.onclick = ()=>{ const pred = (document.getElementById('pred').value||'').trim(); if(!pred){ setFeedback('Enter a prediction before checking.'); addScore(-1); return; } addScore(5); setFeedback('Prediction recorded. Discuss observations and compare to prediction. +5 pts'); progressAdd(15); }
+  }
+
+  // ---------- Boiling & Evaporation ----------
+  function renderBoiling(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Boiling vs Evaporation'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.style.marginTop='8px'; hint.textContent='Compare boiling (100°C) with evaporation (any temp). Complete the quick quiz.'; view.appendChild(hint);
+
+    // quick compare quiz
+    const qWrap = document.createElement('div'); qWrap.style.marginTop='12px'; qWrap.innerHTML = '<div class="small">Choose which statements are TRUE or FALSE:</div>';
+    const statements = [
+      {t:'Boiling occurs at a fixed temperature for a substance.'},
+      {t:'Evaporation can happen at room temperature.'},
+      {t:'Boiling only happens at the surface of the liquid.'},
+      {t:'Evaporation involves fast-moving surface particles escaping.'}
+    ];
+    const list = document.createElement('div'); list.style.marginTop='8px'; statements.forEach((s,i)=>{ const row=document.createElement('div'); row.className='row'; row.style.marginTop='6px'; row.innerHTML = '<div style="flex:1">'+s.t+'</div><select id="q'+i+'"><option value="">-- choose --</option><option value="T">True</option><option value="F">False</option></select>'; list.appendChild(row); }); qWrap.appendChild(list);
+    view.appendChild(qWrap);
+
+    current = {type:'boiling', answers:['T','T','F','T']};
+
+    checkBtn.onclick = ()=>{ let ok=true; let correct=0; for(let i=0;i<current.answers.length;i++){ const val=document.getElementById('q'+i).value; if(!val){ ok=false; } else if(val===current.answers[i]) correct++; }
+      if(!ok){ setFeedback('Please answer all statements.'); addScore(-1); return; }
+      if(correct===current.answers.length){ addScore(6); setFeedback('All correct — +6 pts. Discuss real-life examples.'); progressAdd(20); } else { addScore(-1); setFeedback('Some answers incorrect. Score: '+correct+'/'+current.answers.length); }
+    };
+  }
+
+  // ---------- Gases ----------
+  function renderGases(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Gases — Properties & Experiments'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.style.marginTop='8px'; hint.textContent='Explore gas properties (takes space, fills container, expands when heated). Use the mini-experiments and printable worksheet.'; view.appendChild(hint);
+
+    // mini-experiment prompts
+    const exp = document.createElement('div'); exp.style.marginTop='12px'; exp.innerHTML = '<div class="small">Mini-experiments: 1) Inflate a balloon; 2) Place balloon over warm water bottle and observe expansion; 3) Compare cold vs warm air.</div>';
+    view.appendChild(exp);
+
+    // quick questions
+    const qWrap = document.createElement('div'); qWrap.style.marginTop='12px'; qWrap.innerHTML = '<div class="small">Quick quiz: Fill in the blanks (type your answers):</div><div style="margin-top:8px"><div>1. Gases have no fixed <input id="g1" placeholder="shape" style="width:120px"/></div><div style="margin-top:6px">2. When heated, gas particles move <input id="g2" placeholder="faster/slower" style="width:120px"/></div></div>';
+    view.appendChild(qWrap);
+
+    current = {type:'gases'};
+
+    checkBtn.onclick = ()=>{ const a1=(document.getElementById('g1').value||'').trim().toLowerCase(); const a2=(document.getElementById('g2').value||'').trim().toLowerCase(); if(!a1 || !a2){ setFeedback('Answer both blanks.'); addScore(-1); return; } const ok1 = a1.includes('shape')||a1.includes('shape')||a1.includes('shape.'); const ok2 = a2.startsWith('f'); if(ok1 && ok2){ addScore(5); setFeedback('Good — gases expand and particles move faster when heated. +5 pts'); progressAdd(15);} else { addScore(-1); setFeedback('Check your answers — expected: shape, faster.'); } };
+  }
+
+  // ---------- Experiment Planner ----------
+  function renderPlanner(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Design Experiment — Planner & Materials Checklist'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.style.marginTop='8px'; hint.textContent='Use this planner to create a fair test and auto-generate a materials checklist and printable worksheet.'; view.appendChild(hint);
+
+    const form = document.createElement('div'); form.style.marginTop='12px'; form.innerHTML = `
+      <div class="small">Experiment title:<br/><input id="expTitle" placeholder="e.g., Does light affect seed germination?" style="width:100%"/></div>
+      <div style="margin-top:8px" class="small">Question (what you will test):<br/><input id="expQ" placeholder="e.g., Does material X conduct heat faster than Y?" style="width:100%"/></div>
+      <div style="margin-top:8px" class="small">Independent variable (what you change):<br/><input id="indVar" placeholder="e.g., material type" style="width:100%"/></div>
+      <div style="margin-top:8px" class="small">Dependent variable (what you measure):<br/><input id="depVar" placeholder="e.g., temperature rise in °C" style="width:100%"/></div>
+      <div style="margin-top:8px" class="small">Control variables (what stays the same):<br/><input id="ctrlVar" placeholder="e.g., same amount of heat, same pot size" style="width:100%"/></div>
+      <div style="margin-top:8px" class="small">Estimated materials (comma separated):<br/><input id="materials" placeholder="ice cubes, thermometer, beaker, spoons, stopwatch" style="width:100%"/></div>
+      <div style="margin-top:8px" class="row"><button id="genBtn" class="button">Generate Checklist & Worksheet</button><button id="copyBtn" class="button ghost">Copy Checklist</button><button id="printBtn" class="button secondary">Print Worksheet</button></div>
+    `;
+    view.appendChild(form);
+
+    const out = document.createElement('div'); out.style.marginTop='12px'; out.id='plannerOut'; view.appendChild(out);
+
+    document.getElementById('genBtn').addEventListener('click', ()=>{
+      const title = (document.getElementById('expTitle').value||'Experiment').trim();
+      const q = (document.getElementById('expQ').value||'').trim();
+      const ind = (document.getElementById('indVar').value||'').trim();
+      const dep = (document.getElementById('depVar').value||'').trim();
+      const ctrl = (document.getElementById('ctrlVar').value||'').trim();
+      const mats = (document.getElementById('materials').value||'').trim();
+      if(!q || !mats){ setFeedback('Please enter at least a question and some materials.'); addScore(-1); return; }
+      const matArr = mats.split(',').map(s=>s.trim()).filter(Boolean);
+      const checklistHtml = '<div><b>Materials checklist</b><ul class="material-list">'+matArr.map(m=>'<li>'+m+'</li>').join('')+'</ul></div>';
+      const worksheetHtml = `<div style="margin-top:8px"><b>Worksheet — ${escapeHtml(title)}</b><div class="small" style="margin-top:6px">Question: ${escapeHtml(q)}</div><div style="margin-top:6px">Independent variable: ${escapeHtml(ind)}<br/>Dependent variable: ${escapeHtml(dep)}<br/>Controls: ${escapeHtml(ctrl)}</div><div style="margin-top:10px"><b>Predictions</b><br/><textarea rows="3" style="width:100%" placeholder="Write your prediction..."></textarea></div><div style="margin-top:8px"><b>Observations</b><br/><table style="width:100%"><tr><th>Time</th><th>Measurement</th><th>Notes</th></tr><tr><td>0</td><td></td><td></td></tr></table></div></div>`;
+      out.innerHTML = checklistHtml + worksheetHtml;
+      current = {type:'planner', materials:matArr, worksheet:worksheetHtml};
+      setFeedback('Checklist & worksheet generated.'); addScore(3); progressAdd(10);
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', ()=>{
+      if(!current || current.type!=='planner'){ setFeedback('Generate checklist first.'); return; }
+      const txt = current.materials.join('\n'); navigator.clipboard.writeText(txt).then(()=> setFeedback('Checklist copied to clipboard.'), ()=> setFeedback('Copy failed — allow clipboard permissions.'));
+    });
+
+    document.getElementById('printBtn').addEventListener('click', ()=>{
+      if(!current || current.type!=='planner'){ setFeedback('Generate worksheet first.'); return; }
+      const w = window.open('','_blank'); const html = `<html><head><title>Worksheet</title><style>body{font-family:Arial;padding:18px}</style></head><body><h2>Worksheet</h2>${current.worksheet}<hr><p>Islamic reflection: Use knowledge as amanah — be responsible.</p><p>Eco reflection: Avoid waste, reuse materials where possible.</p></body></html>`; w.document.open(); w.document.write(html); w.document.close();
+    });
+  }
+
+  // helpers
+  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function progressAdd(n){ progress = Math.min(100, progress + n); updateUI(); }
+
+  // hints
+  hintBtn.addEventListener('click', ()=>{ if(!current){ setFeedback('Choose a tab first.'); return; } setFeedback('Hint: discuss predictions with peers and record observations carefully.'); addScore(-1); speak('Hint: discuss your prediction with a partner.'); });
+
+  // next
+  nextBtn.addEventListener('click', ()=>{ const active = document.querySelector('.tab.active'); if(active) renderTab(active.dataset.tab); setFeedback('New task ready.'); });
+
+  // check default
+  checkBtn.addEventListener('click', ()=>{ setFeedback('Use the Check button inside each activity.'); });
+
+  // large font
+  fontBtn.addEventListener('click', ()=>{ largeFont = !largeFont; document.getElementById('app').classList.toggle('large-font', largeFont); fontBtn.textContent = largeFont? 'Normal font':'Large font'; });
+
+  // dua
+  duaBtn.addEventListener('click', ()=>{ speak('Bismillah. O Allah, grant us beneficial knowledge and wisdom.'); setFeedback('Dua played.'); });
+
+  // initial
+  updateUI(); renderTab('conductivity');
+
+  // expose for debug
+  window._Y6Science = {renderTab, addScore, progressAdd};
+});
+</script>
+</body>
+</html>

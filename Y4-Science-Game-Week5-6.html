@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y4 Science — Animals & Energy Interactive</title>
+<style>
+  :root{--bg:#ffffff;--panel:#f7f7f9;--muted:#374151;--accent:#0b78d1;--accent2:#059669;--shadow:0 6px 18px rgba(2,6,23,0.06);--font:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:#0f172a}
+  .app{max-width:1100px;margin:18px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:12px}
+  @media(min-width:980px){.grid{grid-template-columns:1fr 320px}}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:8px;cursor:pointer}
+  button.ghost{background:transparent;border:2px solid rgba(2,6,23,0.06);color:var(--accent)}
+  .option{background:#fff;padding:10px;border-radius:8px;border:1px solid #e6edf3;cursor:pointer;text-align:center}
+  .option.selected{background:var(--accent2);color:#fff;border-color:transparent}
+  .small{font-size:13px;color:var(--muted)}
+  .big{font-weight:700}
+  .canvas-wrap{background:#fff;padding:8px;border-radius:8px;border:1px dashed #e6edf3}
+  .clock{width:220px;height:220px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:6px solid #fff}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y4 Science — Animals & Energy Interactive</h1>
+      <div class="sub">Classify animals • Exoskeletons • Identification keys • Energy hunt & stations • Islamic & Eco links</div>
+    </div>
+    <div class="row">
+      <div class="panel small">Score: <b id="score">0</b></div>
+      <div class="panel small">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="restart" class="ghost">Restart</button>
+    </div>
+  </header>
+
+  <main class="grid" style="margin-top:14px">
+    <section class="panel" id="left">
+      <div class="big">Activity</div>
+      <div style="margin-top:8px" id="taskArea"></div>
+      <div style="margin-top:12px" class="row">
+        <button id="checkBtn">Check Answer</button>
+        <button id="nextBtn" class="ghost">Next</button>
+        <button id="hintBtn" class="ghost">Hint (-1 pt)</button>
+      </div>
+      <div id="feedback" class="small" style="margin-top:10px"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="big">Teacher Panel</div>
+      <div class="small" style="margin-top:8px">Choose topic and guide students. Start with a short dua, ask reflection questions and link to the values shown in the tasks.</div>
+
+      <div style="margin-top:12px">
+        <label class="small">Choose Activity</label>
+        <select id="mode" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid #e6edf3">
+          <option value="classify">Vertebrate or Invertebrate</option>
+          <option value="exoskeleton">Exoskeleton Explorer</option>
+          <option value="key">Make an ID Key</option>
+          <option value="energyhunt">Energy Hunt</option>
+          <option value="stations">Energy Stations</option>
+          <option value="sketch">Sketch & Label (draw a habitat/animal)</option>
+        </select>
+      </div>
+
+      <div style="margin-top:12px" class="small">
+        <div class="row"><button id="playDua" class="ghost">Play Dua</button><button id="export" class="ghost">Export Data</button></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Progress</div>
+        <div class="small" style="margin-top:6px">Complete tasks to earn stars. Use hints sparingly — they cost a point.</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Tip: Start with "Assalamualaikum" and a short dua. Relate classification to Allah's wisdom and ecosystem balance when wrapping up.
+  </footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Elements
+  const modeSel = document.getElementById('mode');
+  const taskArea = document.getElementById('taskArea');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const restartBtn = document.getElementById('restart');
+  const playDua = document.getElementById('playDua');
+  const exportBtn = document.getElementById('export');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const feedback = document.getElementById('feedback');
+
+  // state
+  let score = 0, stars = 0; let current=null; let dataLog = [];
+  function updateUI(){ scoreEl.textContent = score; stars = score>=24?3:score>=14?2:score>=6?1:0; starsEl.textContent = '★'.repeat(stars)+ '☆'.repeat(3-stars); }
+  function info(msg){ feedback.textContent = msg; }
+  function addScore(n){ score = Math.max(0, score + n); updateUI(); }
+
+  // helper: create option element
+  function makeOption(text){ const el = document.createElement('div'); el.className='option'; el.textContent = text; el.onclick = ()=>{ // toggle selection
+      if(el.classList.contains('selected')) el.classList.remove('selected'); else { // single select for options groups
+        const sibling = el.parentElement.querySelectorAll('.option'); sibling.forEach(s=>s.classList.remove('selected')); el.classList.add('selected'); }
+    }; return el; }
+
+  // Modes
+  function renderMode(mode){ taskArea.innerHTML=''; current=null; info(''); checkBtn.disabled=false;
+    if(mode==='classify') renderClassify();
+    else if(mode==='exoskeleton') renderExoskeleton();
+    else if(mode==='key') renderKey();
+    else if(mode==='energyhunt') renderEnergyHunt();
+    else if(mode==='stations') renderStations();
+    else if(mode==='sketch') renderSketch();
+  }
+
+  // 1: classify vertebrate/invertebrate
+  function renderClassify(){ const title = document.createElement('div'); title.className='big'; title.textContent='Vertebrate or Invertebrate — Sort the animals'; taskArea.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small'; hint.textContent='Click the correct group for each animal.'; taskArea.appendChild(hint);
+
+    const animals = [
+      {name:'Cat', type:'Vertebrate'},
+      {name:'Crab', type:'Invertebrate'},
+      {name:'Frog', type:'Vertebrate'},
+      {name:'Bee', type:'Invertebrate'},
+      {name:'Fish', type:'Vertebrate'},
+      {name:'Worm', type:'Invertebrate'}
+    ];
+    // shuffle
+    animals.sort(()=>Math.random()-0.5);
+    animals.forEach((a,idx)=>{
+      const row = document.createElement('div'); row.style.marginTop='8px';
+      const q = document.createElement('div'); q.textContent = (idx+1)+'. ' + a.name; q.style.minWidth='120px'; q.style.fontWeight='600';
+      const groupRow = document.createElement('div'); groupRow.className='row'; groupRow.style.marginTop='6px';
+      const v = makeOption('Vertebrate'); const iv = makeOption('Invertebrate');
+      groupRow.appendChild(v); groupRow.appendChild(iv);
+      row.appendChild(q); row.appendChild(groupRow);
+      taskArea.appendChild(row);
+      // attach answer marker
+      a._vEl = v; a._ivEl = iv;
+    });
+    current = {type:'classify', animals:animals};
+
+    checkBtn.onclick = ()=>{
+      let correct = 0; animals.forEach(a=>{
+        const selV = a._vEl.classList.contains('selected'); const selIV = a._ivEl.classList.contains('selected');
+        if((a.type==='Vertebrate' && selV && !selIV) || (a.type==='Invertebrate' && selIV && !selV)) correct++;
+      });
+      if(correct === animals.length){ addScore(6); info('All correct! +6 pts'); dataLog.push({mode:'classify', result:'all correct'}); checkBtn.disabled=true; }
+      else{ addScore(-1); info(`You got ${correct}/${animals.length}. Try again or use Hint. (-1pt)`); dataLog.push({mode:'classify', result:correct}); }
+    };
+  }
+
+  // 2: exoskeleton explorer — match advantage/disadvantage
+  function renderExoskeleton(){ const title = document.createElement('div'); title.className='big'; title.textContent='Exoskeleton Explorer'; taskArea.appendChild(title);
+    const p = document.createElement('div'); p.className='small'; p.textContent='Select the statements that describe advantages of having an exoskeleton.'; taskArea.appendChild(p);
+    const choices = [
+      {t:'Protects the body (like armor)', ok:true},
+      {t:'Allows fast growth by stretching skin', ok:false},
+      {t:'Prevents water loss in dry places', ok:true},
+      {t:'Makes the animal heavier to move easily', ok:false}
+    ];
+    choices.sort(()=>Math.random()-0.5);
+    const grid = document.createElement('div'); grid.className='row'; grid.style.marginTop='8px'; grid.style.flexDirection='column';
+    choices.forEach(c=>{ const o = makeOption(c.t); grid.appendChild(o); c._el = o; }); taskArea.appendChild(grid);
+    current = {type:'exoskeleton', choices:choices};
+
+    checkBtn.onclick = ()=>{
+      let okCount = 0, totalOk = choices.filter(c=>c.ok).length;
+      choices.forEach(c=>{ if(c._el.classList.contains('selected') && c.ok) okCount++; if(c._el.classList.contains('selected') && !c.ok) okCount -= 0.5; });
+      if(okCount === totalOk){ addScore(5); info('Good job — advantages correct! +5 pts'); dataLog.push({mode:'exoskeleton', score:okCount}); checkBtn.disabled=true; }
+      else{ addScore(-1); info(`Not quite — advantages found: ${okCount}/${totalOk}. (-1pt)`); dataLog.push({mode:'exoskeleton', score:okCount}); }
+    };
+  }
+
+  // 3: identification key — build a simple yes/no key
+  function renderKey(){ const title = document.createElement('div'); title.className='big'; title.textContent='Make a Simple ID Key'; taskArea.appendChild(title);
+    const p = document.createElement('div'); p.className='small'; p.textContent='Use the dropdowns to choose questions that separate animals. Then test your key.'; taskArea.appendChild(p);
+
+    const animals = ['Cat','Frog','Bee','Fish','Snail'];
+    const questions = ['Has fur or hair','Has feathers','Has six legs','Lives in water','Has a shell','Lays eggs','Has backbone'];
+    const q1 = document.createElement('select'); const q2 = document.createElement('select');
+    [q1,q2].forEach(s=>{ s.innerHTML = '<option value="">-- choose question --</option>' + questions.map(q=>`<option value="${q}">${q}</option>`).join(''); s.style.width='100%'; s.style.marginTop='8px'; });
+    taskArea.appendChild(q1); taskArea.appendChild(q2);
+    const testWrap = document.createElement('div'); testWrap.style.marginTop='10px'; testWrap.innerHTML = '<div class="small">Test an animal: </div>';
+    const animalSel = document.createElement('select'); animalSel.innerHTML = '<option value="">-- choose animal --</option>' + animals.map(a=>`<option>${a}</option>`).join(''); animalSel.style.marginTop='6px'; testWrap.appendChild(animalSel);
+    taskArea.appendChild(testWrap);
+    current = {type:'key', q1:q1, q2:q2, animalSel:animalSel};
+
+    checkBtn.onclick = ()=>{
+      const qq1 = q1.value; const qq2 = q2.value; const chosen = animalSel.value;
+      if(!qq1 || !qq2 || !chosen){ info('Choose two questions and an animal to test.'); addScore(-1); return; }
+      // simple validation: ensure questions are different
+      if(qq1 === qq2){ info('Choose two different questions.'); addScore(-1); return; }
+      addScore(4); info('Key created and tested — teacher review suggested. +4 pts'); dataLog.push({mode:'key', q1:qq1, q2:qq2, test:chosen}); checkBtn.disabled=true;
+    };
+  }
+
+  // 4: energy hunt — list items around class
+  function renderEnergyHunt(){ const title=document.createElement('div'); title.className='big'; title.textContent='Energy Hunt — Find sources of energy'; taskArea.appendChild(title);
+    const p = document.createElement('div'); p.className='small'; p.textContent='Type or choose examples of energy you can see in the classroom or school.'; taskArea.appendChild(p);
+
+    const examples = ['Light (sun/light bulb)','Movement (people/fans)','Sound (voices)','Heat (radiator/sun)','Stored (food)'];
+    const grid = document.createElement('div'); grid.style.marginTop='8px'; examples.forEach(e=>{ const b = makeOption(e); grid.appendChild(b); }); taskArea.appendChild(grid);
+    const input = document.createElement('input'); input.placeholder='Add your own example (e.g., batteries)'; input.style.width='100%'; input.style.marginTop='8px'; taskArea.appendChild(input);
+    current = {type:'energyhunt', examplesGrid:grid, input:input};
+
+    checkBtn.onclick = ()=>{
+      const selected = Array.from(grid.querySelectorAll('.option.selected')).map(x=>x.textContent);
+      const extra = input.value.trim(); if(extra) selected.push(extra);
+      if(selected.length>=2){ addScore(4); info('Good list — you found multiple energy uses. +4 pts'); dataLog.push({mode:'energyhunt', items:selected}); checkBtn.disabled=true; } else { addScore(-1); info('Find at least 2 examples. (-1pt)'); }
+    };
+  }
+
+  // 5: stations — simulate three stations and record observations
+  function renderStations(){ const title=document.createElement('div'); title.className='big'; title.textContent='Energy Stations — record what you observe'; taskArea.appendChild(title);
+    const p = document.createElement('div'); p.className='small'; p.textContent='Visit each station and record type of energy and one observation.'; taskArea.appendChild(p);
+    const stations = ['Wind (pinwheel)','Elastic (rubber band launcher)','Human (jumping)'];
+    stations.forEach((s,i)=>{
+      const wrap = document.createElement('div'); wrap.style.marginTop='8px'; wrap.innerHTML = `<div style="font-weight:600">Station ${i+1}: ${s}</div>`;
+      const inp = document.createElement('input'); inp.placeholder='Write one observation'; inp.style.width='100%'; inp.style.marginTop='6px'; wrap.appendChild(inp); taskArea.appendChild(wrap); s._inp = inp;
+    });
+    current = {type:'stations', stations:stations};
+
+    checkBtn.onclick = ()=>{
+      const filled = current.stations.map(s=>s._inp.value.trim()).filter(Boolean);
+      if(filled.length === current.stations.length){ addScore(6); info('All stations recorded — good scientific notes! +6 pts'); dataLog.push({mode:'stations', notes:filled}); checkBtn.disabled=true; } else { addScore(-1); info('Please make one observation for each station. (-1pt)'); }
+    };
+  }
+
+  // 6: sketch & label — drawing canvas for habitat/animal
+  function renderSketch(){ const title=document.createElement('div'); title.className='big'; title.textContent='Sketch & Label'; taskArea.appendChild(title);
+    const p = document.createElement('div'); p.className='small'; p.textContent='Draw an animal or habitat and label two features or needs (e.g., sunlight, water).'; taskArea.appendChild(p);
+    const canvasWrap = document.createElement('div'); canvasWrap.className='canvas-wrap'; canvasWrap.style.marginTop='8px';
+    const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 340; canvas.style.width='100%'; canvas.style.height='auto'; canvasWrap.appendChild(canvas); taskArea.appendChild(canvasWrap);
+    const clear = document.createElement('button'); clear.textContent='Clear'; clear.style.marginTop='8px'; clear.className='ghost'; taskArea.appendChild(clear);
+    const note = document.createElement('div'); note.className='small'; note.textContent='When finished press Check Answer to submit your drawing.'; note.style.marginTop='6px'; taskArea.appendChild(note);
+
+    const ctx = canvas.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#0b78d1'; let drawing=false;
+    function getPos(e){ const r = canvas.getBoundingClientRect(); const x = (e.touches?e.touches[0].clientX:e.clientX)-r.left; const y = (e.touches?e.touches[0].clientY:e.clientY)-r.top; return {x,y}; }
+    canvas.addEventListener('pointerdown', e=>{ drawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+    canvas.addEventListener('pointermove', e=>{ if(!drawing) return; const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+    window.addEventListener('pointerup', ()=>{ if(drawing){ drawing=false; ctx.closePath(); } });
+    clear.addEventListener('click', ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); });
+
+    current = {type:'sketch', canvas:canvas};
+    checkBtn.onclick = ()=>{
+      const pixels = ctx.getImageData(0,0,canvas.width,canvas.height).data; let nonEmpty=false; for(let i=0;i<pixels.length;i+=4){ if(pixels[i+3]!==0){ nonEmpty=true; break; } }
+      if(!nonEmpty){ addScore(-1); info('Please draw before submitting. (-1pt)'); return; }
+      addScore(5); info('Drawing submitted — teacher review. +5 pts'); dataLog.push({mode:'sketch', imageData:canvas.toDataURL()}); checkBtn.disabled=true;
+    };
+  }
+
+  // Hint behaviour
+  hintBtn.addEventListener('click', ()=>{
+    if(!current){ info('Select an activity first.'); return; }
+    addScore(-1);
+    switch(current.type){
+      case 'classify': info('Hint: animals with backbones are vertebrates (fish, cat, frog)'); break;
+      case 'exoskeleton': info('Hint: exoskeletons protect and help prevent water loss'); break;
+      case 'key': info('Hint: choose traits that clearly separate animals (e.g., has backbone)'); break;
+      case 'energyhunt': info('Hint: Look for light, movement, sound, heat, and stored energy (food)'); break;
+      case 'stations': info('Hint: Write a short sentence about what you observed at each station'); break;
+      case 'sketch': info('Hint: Label two needs or features (e.g., roots, sunlight)'); break;
+      default: info('Think step-by-step!');
+    }
+  });
+
+  // Next resets current activity of same mode
+  nextBtn.addEventListener('click', ()=>{ renderMode(modeSel.value); checkBtn.disabled=false; info('New task loaded.'); });
+
+  // Restart
+  restartBtn.addEventListener('click', ()=>{ if(confirm('Restart game and reset score?')){ score=0; dataLog=[]; updateUI(); renderMode(modeSel.value); info('Reset complete.'); } });
+
+  // Mode change
+  modeSel.addEventListener('change', ()=>{ renderMode(modeSel.value); });
+
+  // Dua
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s=new SpeechSynthesisUtterance('Bismillah. O Allah, grant us beneficial knowledge.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s);} else alert('Dua: Bismillah. O Allah, grant us beneficial knowledge.'); });
+
+  // Export
+  exportBtn.addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify({score,dataLog},null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='y4science_data.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); info('Exported data as y4science_data.json'); });
+
+  // initial render
+  updateUI(); renderMode(modeSel.value);
+  // expose for debugging
+  window._Y4Science = {renderMode, addScore, dataLog};
+});
+</script>
+</body>
+</html>

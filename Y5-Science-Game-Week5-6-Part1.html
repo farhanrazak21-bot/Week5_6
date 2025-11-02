@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y5 Science — Seed Germination Interactive</title>
+<style>
+  :root{--bg:#ffffff;--panel:#fff;--muted:#444;--accent:#2b8aef;--accent2:#16a34a;--shadow:0 6px 18px rgba(0,0,0,0.08);--font:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:#f7f7f7;color:#0b1220}
+  .app{max-width:1050px;margin:18px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:var(--shadow)}
+  .controls{display:flex;gap:8px;align-items:center}
+  .tabs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .tab{padding:8px 12px;border-radius:999px;cursor:pointer;border:1px solid #e6eefc;background:#fff}
+  .tab.active{background:var(--accent);color:#fff;border-color:transparent}
+  main{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-top:12px}
+  @media(max-width:980px){main{grid-template-columns:1fr}}
+  .big{font-weight:700}
+  .hint{color:var(--muted);font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:8px;cursor:pointer}
+  button.ghost{background:transparent;border:2px solid rgba(15,23,42,0.06);color:var(--accent)}
+  button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+  input,select,textarea{padding:8px;border-radius:8px;border:1px solid #e6edf3;width:100%}
+  .option{padding:10px;border-radius:8px;border:1px dashed #e6edf3;background:#fff;cursor:pointer}
+  .option.selected{background:var(--accent2);color:#fff;border:none}
+  .canvas-wrap{background:#fff;padding:8px;border-radius:8px;border:1px dashed #e6edf3}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y5 Science — Seed Germination Interactive</h1>
+      <div class="sub">Explore germination stages, plan experiments, record observations & reflect (Islamic & Eco links)</div>
+      <div class="tabs" style="margin-top:10px">
+        <button class="tab active" data-tab="stages">Germination Stages</button>
+        <button class="tab" data-tab="conditions">Conditions Match</button>
+        <button class="tab" data-tab="experiment">Design Experiment</button>
+        <button class="tab" data-tab="observe">Record Observations</button>
+        <button class="tab" data-tab="quiz">Quick Quiz</button>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="panel" style="padding:8px;font-size:13px">Score: <b id="score">0</b></div>
+      <div class="panel" style="padding:8px;font-size:13px">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="restart" class="ghost">Restart</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="left">
+      <div class="big" id="title">Germination Stages</div>
+      <div class="hint" id="subtitle">Sequence the stages of seed germination from seed → root → shoot → seedling.</div>
+      <div style="margin-top:12px" id="taskArea"></div>
+      <div style="margin-top:12px" class="row">
+        <button id="checkBtn">Check Answer</button>
+        <button id="nextBtn" class="secondary">Next</button>
+        <button id="hintBtn" class="ghost">Hint (-1 pt)</button>
+      </div>
+      <div style="margin-top:10px" class="hint" id="feedback"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="big">Teacher Panel</div>
+      <div class="hint" style="margin-top:8px">Begin with dua. Use hints to support students (cost -1pt). Use Next to randomise tasks. Teachers can type quick notes below to record group observations.</div>
+      <div style="margin-top:12px"><textarea id="teacherNotes" rows="4" placeholder="Teacher notes / group name..."></textarea></div>
+      <div style="margin-top:10px" class="row">
+        <button id="playDua" class="ghost">Play Dua</button>
+        <button id="export" class="ghost">Export Log</button>
+      </div>
+      <div style="margin-top:12px" class="hint small">Progress bar</div>
+      <div style="margin-top:6px;background:#f1f5f9;border-radius:999px;overflow:hidden;height:12px"><i id="prog" style="display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></i></div>
+      <div style="margin-top:8px" class="hint small">Logs: <pre id="log" style="max-height:180px;overflow:auto;background:#fff;padding:6px;border-radius:6px"></pre></div>
+    </aside>
+  </main>
+
+  <footer>
+    Tip: Link activities to faith — reflect on Allah's creation and the responsibility (amanah) to care for plants. Use the garden for experiments where possible.
+  </footer>
+</div>
+
+<script>
+// Y5 Seed Germination Interactive — robust DOM handling
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Elements
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const taskArea = document.getElementById('taskArea');
+  const titleEl = document.getElementById('title');
+  const subtitleEl = document.getElementById('subtitle');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const prog = document.getElementById('prog');
+  const restart = document.getElementById('restart');
+  const playDua = document.getElementById('playDua');
+  const exportBtn = document.getElementById('export');
+  const logEl = document.getElementById('log');
+
+  // state
+  let current = null; // {type:..., answer:..., data...}
+  let score = 0, stars = 0, progress = 0;
+  const log = [];
+
+  function updateUI(){ scoreEl.textContent = score; starsEl.textContent = '★'.repeat(stars)+ '☆'.repeat(3-stars); prog.style.width = progress + '%'; }
+  function addScore(n){ score = Math.max(0, score + n); stars = score>=30?3:score>=18?2:score>=8?1:0; updateUI(); }
+  function setFeedback(msg){ feedback.textContent = msg; }
+  function addLog(entry){ const t = new Date().toLocaleString(); log.push({t,entry}); logEl.textContent = log.map(l=>`[${l.t}] ${l.entry}`).reverse().join('\n'); }
+
+  // safe random helpers
+  function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  // Tab switching
+  tabs.forEach(t=> t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); renderTab(t.dataset.tab); }));
+
+  // Renderers
+  function renderTab(id){ current=null; setFeedback(''); checkBtn.disabled=false; nextBtn.disabled=false; if(id==='stages') renderStages(); else if(id==='conditions') renderConditions(); else if(id==='experiment') renderExperiment(); else if(id==='observe') renderObserve(); else if(id==='quiz') renderQuiz(); }
+
+  // 1) Germination stages — drag/drop like ordering (simple clickable order builder)
+  function renderStages(){ titleEl.textContent='Germination Stages'; subtitleEl.textContent='Put the stages in correct order: seed → root → shoot → seedling'; taskArea.innerHTML='';
+    const stages = ['Seed','Root emerges','Shoot emerges','Seedling with leaves'];
+    const shuffled = stages.slice().sort(()=>Math.random()-0.5);
+    const box = document.createElement('div'); box.className='row'; box.style.flexDirection='column'; box.style.gap='8px';
+    shuffled.forEach(s=>{ const b=document.createElement('div'); b.className='option'; b.textContent = s; b.dataset.val=s; b.onclick=()=>{ // toggle selection to append to answer area
+        const selArea = document.getElementById('orderArea'); const already = Array.from(selArea.children).some(c=>c.dataset.val===b.dataset.val); if(!already){ const chip = document.createElement('div'); chip.className='option'; chip.style.display='inline-block'; chip.style.marginRight='6px'; chip.textContent=b.dataset.val; chip.dataset.val=b.dataset.val; chip.onclick=()=>{ chip.remove(); }; selArea.appendChild(chip); }
+      }; box.appendChild(b); });
+    taskArea.appendChild(box);
+    const instr = document.createElement('div'); instr.style.marginTop='10px'; instr.innerHTML = '<div class="small">Click each stage to add it to the answer line in the order you think is correct. Click an added item to remove it.</div><div id="orderArea" style="margin-top:8px;min-height:36px"></div>';
+    taskArea.appendChild(instr);
+    current = {type:'stages', correct:stages.join('|')};
+
+    checkBtn.onclick = ()=>{
+      const sel = Array.from(document.getElementById('orderArea').children).map(c=>c.dataset.val);
+      if(sel.length!==stages.length){ setFeedback('You must select all 4 stages in an order.'); return; }
+      const ans = sel.join('|');
+      if(ans===current.correct){ addScore(6); progress = Math.min(100, progress+20); updateUI(); setFeedback('Correct order — well done! +6 pts'); addLog('Stages correct'); checkBtn.disabled=true; } else { addScore(-1); setFeedback('Not quite — check the sequence. (-1pt)'); addLog('Stages incorrect attempt'); }
+    };
+  }
+
+  // 2) Conditions Match — match condition to role (drag-like click cards)
+  function renderConditions(){ titleEl.textContent='Conditions for Germination'; subtitleEl.textContent='Match the condition to its role (Water, Warmth, Air)'; taskArea.innerHTML='';
+    const roles = ['Absorbs water to swell','Provides energy & enzyme action','Provides oxygen for respiration'];
+    const cards = ['Water','Warmth','Air'].sort(()=>Math.random()-0.5);
+    const grid = document.createElement('div'); grid.className='row'; grid.style.flexDirection='column'; grid.style.gap='8px';
+    roles.forEach((r,i)=>{ const row = document.createElement('div'); row.className='row'; row.style.justifyContent='space-between'; row.style.alignItems='center'; const lbl = document.createElement('div'); lbl.textContent = r; lbl.style.flex='1'; const sel = document.createElement('select'); sel.innerHTML = '<option value="">-- choose condition --</option>' + cards.map(c=>`<option>${c}</option>`).join(''); sel.dataset.correct = ['Water','Warmth','Air'][i]; row.appendChild(lbl); row.appendChild(sel); grid.appendChild(row); });
+    taskArea.appendChild(grid);
+    current = {type:'conditions'};
+
+    checkBtn.onclick = ()=>{
+      const selects = taskArea.querySelectorAll('select'); let all=true, ok=true;
+      selects.forEach(s=>{ if(!s.value) all=false; if(s.value && s.value !== s.dataset.correct) ok=false; });
+      if(!all){ setFeedback('Please choose an option for every role.'); return; }
+      if(ok){ addScore(7); progress = Math.min(100, progress+20); updateUI(); setFeedback('All matches correct! +7 pts'); addLog('Conditions matched correctly'); checkBtn.disabled=true; } else { addScore(-1); setFeedback('Some matches are incorrect. Check each role. (-1pt)'); addLog('Conditions incorrect attempt'); }
+    };
+  }
+
+  // 3) Design Experiment — form inputs to record hypothesis & variables
+  function renderExperiment(){ titleEl.textContent='Design a Germination Experiment'; subtitleEl.textContent='Plan a fair test: choose one variable to change and keep others constant.'; taskArea.innerHTML='';
+    const form = document.createElement('div'); form.style.display='grid'; form.style.gap='8px';
+    form.innerHTML = `<label>Choose variable to test:</label><select id="varSel"><option value="water">Water (presence/absence)</option><option value="light">Light (sunlight/dark)</option><option value="warmth">Warmth (room/cool)</option></select>
+                      <label>Write a short hypothesis:</label><textarea id="hyp" rows="3" placeholder="I think..."></textarea>
+                      <label>List control factors (what stays same):</label><input id="controls" placeholder="e.g., same seed type, same soil" />
+                      <label>How will you measure growth?</label><input id="measure" placeholder="e.g., height in cm, number of leaves" />`;
+    taskArea.appendChild(form);
+    current = {type:'experiment'};
+
+    checkBtn.onclick = ()=>{
+      const v = document.getElementById('varSel').value; const h = document.getElementById('hyp').value.trim(); const c = document.getElementById('controls').value.trim(); const m = document.getElementById('measure').value.trim();
+      if(!h || !c || !m){ setFeedback('Please complete hypothesis, controls and measurement method.'); return; }
+      addScore(8); progress = Math.min(100, progress+20); updateUI(); setFeedback('Experiment plan saved. +8 pts'); addLog(`Experiment planned: ${v}; Hyp: ${h}`); checkBtn.disabled=true;
+    };
+  }
+
+  // 4) Record Observations — canvas sketch + table input
+  function renderObserve(){ titleEl.textContent='Record Observations'; subtitleEl.textContent='Sketch your seedling and enter measurements.'; taskArea.innerHTML='';
+    const wrap = document.createElement('div'); wrap.style.display='grid'; wrap.style.gap='8px';
+    wrap.innerHTML = `<div class="canvas-wrap"><canvas id="sketch" width="420" height="220" style="background:#fff;border-radius:6px"></canvas></div>
+                      <div class="row"><button id="clearSketch" class="ghost">Clear</button><div style="flex:1"><input id="heightIn" placeholder="Height (cm) e.g., 3.5" /></div></div>
+                      <label>Notes:</label><textarea id="obsNotes" rows="3" placeholder="What did you notice? leaf colour, root length..."></textarea>`;
+    taskArea.appendChild(wrap);
+
+    // drawing
+    const canvas = document.getElementById('sketch'); const ctx = canvas.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#0b1220'; let drawing=false;
+    function s(e){ drawing=true; ctx.beginPath(); const r=canvas.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; ctx.moveTo(x,y); }
+    function m(e){ if(!drawing) return; const r=canvas.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; ctx.lineTo(x,y); ctx.stroke(); }
+    function eup(){ drawing=false; ctx.closePath(); }
+    canvas.addEventListener('pointerdown', s); canvas.addEventListener('pointermove', m); window.addEventListener('pointerup', eup);
+    document.getElementById('clearSketch').onclick = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); };
+
+    current = {type:'observe'};
+    checkBtn.onclick = ()=>{
+      // ensure some drawing or notes or measurement
+      const pixels = ctx.getImageData(0,0,canvas.width,canvas.height).data; let nonEmpty=false; for(let i=0;i<pixels.length;i+=4){ if(pixels[i+3]!==0){ nonEmpty=true; break; } }
+      const h = document.getElementById('heightIn').value.trim(); const notes = document.getElementById('obsNotes').value.trim();
+      if(!nonEmpty && !h && !notes){ setFeedback('Please draw, or enter height/notes before submitting.'); return; }
+      addScore(6); progress = Math.min(100, progress+20); updateUI(); setFeedback('Observation recorded. +6 pts'); addLog(`Observation: height=${h}; notes=${notes}`); checkBtn.disabled=true;
+    };
+  }
+
+  // 5) Quick Quiz — short mixed questions
+  function renderQuiz(){ titleEl.textContent='Quick Quiz'; subtitleEl.textContent='Five short questions on germination & conditions.'; taskArea.innerHTML='';
+    const pool = [
+      {q:'Which gas do seeds need for respiration?', a:'Oxygen'},
+      {q:'True/False: Seeds need light to germinate.', a:'False'},
+      {q:'Which of these is most important to start germination? (Water/Warmth/Soil)', a:'Water'},
+      {q:'Write the correct order: seed, shoot, seedling, root (arrange)', a:'seed|root|shoot|seedling'},
+      {q:'How many minutes are in 1.5 hours? (write number)', a:'90'}
+    ].sort(()=>Math.random()-0.5);
+    let idx=0; showQuestion();
+
+    function showQuestion(){ taskArea.innerHTML=''; const obj = pool[idx]; const qDiv = document.createElement('div'); qDiv.innerHTML = `<div class="small">Q${idx+1}: ${obj.q}</div>`; taskArea.appendChild(qDiv);
+      const inp = document.createElement('input'); inp.id='quiz_in'; inp.placeholder='Type your answer here'; inp.style.marginTop='8px'; taskArea.appendChild(inp);
+      current = {type:'quiz', pool, idx};
+      checkBtn.onclick = ()=>{ const val = (document.getElementById('quiz_in').value||'').trim(); if(!val){ setFeedback('Enter an answer'); return; } const corr = pool[idx].a; if(corr.includes('|')){ // order
+            const norm = val.replace(/\s+/g,'').replace(/,/g,'|'); if(norm===corr){ addScore(5); setFeedback('Correct!'); addLog(`Quiz Q${idx+1} correct`); } else { addScore(-1); setFeedback('Incorrect.'); addLog(`Quiz Q${idx+1} incorrect`); }
+        } else {
+            if(val.toLowerCase()===corr.toLowerCase()){ addScore(5); setFeedback('Correct!'); addLog(`Quiz Q${idx+1} correct`); } else { addScore(-1); setFeedback('Incorrect.'); addLog(`Quiz Q${idx+1} incorrect`); }
+        }
+        idx++; if(idx < pool.length){ setTimeout(()=>{ showQuestion(); },600); } else { setFeedback('Quiz complete. Well done!'); checkBtn.disabled=true; }
+      };
+    }
+  }
+
+  // Hint behavior
+  hintBtn.addEventListener('click', ()=>{
+    if(!current){ setFeedback('Choose a task first.'); return; }
+    addScore(-1);
+    switch(current.type){
+      case 'stages': setFeedback('Hint: The root grows first to find water and anchor the seed.'); break;
+      case 'conditions': setFeedback('Hint: Water helps the seed swell; warmth speeds up reactions.'); break;
+      case 'experiment': setFeedback('Hint: Keep seed type, soil and volume of water the same as controls.'); break;
+      case 'observe': setFeedback('Hint: Note leaf colour and height; sketch main features.'); break;
+      case 'quiz': setFeedback('Think about what seeds need to start life (water, oxygen).'); break;
+      default: setFeedback('Try breaking the task into small steps.');
+    }
+    addLog(`Hint used on ${current.type}`);
+  });
+
+  // Next behavior
+  nextBtn.addEventListener('click', ()=>{ const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); setFeedback('New task generated.'); checkBtn.disabled=false; });
+
+  // Restart
+  restart.addEventListener('click', ()=>{ if(confirm('Reset game and scores?')){ score=0; progress=0; stars=0; log.length=0; logEl.textContent=''; updateUI(); const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); setFeedback('Reset complete.'); } });
+
+  // Dua playback
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s=new SpeechSynthesisUtterance('Bismillah. O Allah, grant us beneficial knowledge.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); } else { alert('Dua: Bismillah. May Allah bless our learning.'); } });
+
+  // Export log
+  exportBtn.addEventListener('click', ()=>{
+    const data = {score,progress,log}; const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='seed_germination_log.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+
+  // initial render
+  updateUI(); renderTab('stages');
+  // expose for debugging
+  window._Y5Seed = {renderTab, addScore, log};
+});
+</script>
+</body>
+</html>

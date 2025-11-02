@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y1 Science — Plants & Sound Interactive</title>
+<style>
+  :root{--bg:#fff8f0;--panel:#ffffff;--muted:#6b7280;--accent:#34a853;--accent2:#f59e0b;--shadow:0 8px 20px rgba(0,0,0,0.06);--font:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:#0b1220}
+  .app{max-width:1100px;margin:18px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .controls{display:flex;gap:8px;align-items:center}
+  .panel{background:var(--panel);padding:12px;border-radius:12px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  .two{grid-template-columns:1fr 340px}
+  @media(max-width:980px){.two{grid-template-columns:1fr}}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+  button.ghost{background:transparent;border:2px solid rgba(0,0,0,0.06);color:var(--accent)}
+  select,input{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+  .big{font-weight:700}
+  .hint{color:var(--muted);font-size:13px}
+  .option{background:#fbfcfd;padding:8px;border-radius:8px;border:1px dashed #e6edf3;cursor:pointer}
+  .option.selected{background:var(--accent2);color:white}
+  .canvas-wrap{background:#fff;padding:8px;border-radius:8px;border:1px dashed #e6edf3}
+  canvas{background:#fff;border-radius:6px;border:1px solid #f1f5f9}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y1 Science — Plants & Sound Interactive</h1>
+      <div class="sub">Week 4–6 • Needs of Plants • Light & Water • Sources of Sound • Garden activities & sketchpad</div>
+    </div>
+    <div class="controls">
+      <div class="panel">Score: <b id="score">0</b></div>
+      <button id="restart" class="ghost">Restart</button>
+    </div>
+  </header>
+
+  <main class="grid two" style="margin-top:14px">
+    <section class="panel" id="left">
+      <div class="big">Activity</div>
+      <div style="margin-top:10px" class="row"><label for="topic">Choose Topic:</label><select id="topic" style="min-width:240px">
+        <option value="needs">Needs of Plants</option>
+        <option value="light">Plants & Light</option>
+        <option value="water">Plants & Water</option>
+        <option value="garden">Garden Detective (Outdoor)</option>
+        <option value="sound">Sources of Sound</option>
+      </select></div>
+
+      <div id="taskArea" style="margin-top:12px"></div>
+
+      <div style="margin-top:12px" class="row">
+        <button id="checkBtn">Check Answer</button>
+        <button id="nextBtn" class="ghost">New Task</button>
+        <button id="hintBtn" class="ghost">Hint (-1)</button>
+      </div>
+      <div style="margin-top:10px" class="hint" id="feedback"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="big">Teacher Panel</div>
+      <div class="hint" style="margin-top:8px">Begin each session with Assalamualaikum and a short dua. Use hints to scaffold learning; encourage outdoor observation and dua of gratitude for Allah's creation.</div>
+
+      <div style="margin-top:12px">
+        <div class="big">Quick Controls</div>
+        <div style="margin-top:8px" class="row">
+          <button id="playDua" class="ghost">Play Dua</button>
+          <button id="toggleSound" class="ghost">Sound: ON</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Progress</div>
+        <div class="hint" id="progressText" style="margin-top:6px">Complete tasks to earn points. Encourage reflection: how can we care for plants?</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Tip: Link each activity to real-life routines — water plants, observe sunlight, and listen for sounds. End with dua.
+  </footer>
+</div>
+
+<script>
+// Science Y1 Interactive — safe DOM load
+document.addEventListener('DOMContentLoaded', ()=>{
+  const topicSel = document.getElementById('topic');
+  const taskArea = document.getElementById('taskArea');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const restart = document.getElementById('restart');
+  const playDua = document.getElementById('playDua');
+  const toggleSound = document.getElementById('toggleSound');
+
+  let score = 0; let current = null; let soundOn = true;
+  function setScore(n){ score = Math.max(0,n); scoreEl.textContent = score; }
+  function addScore(n){ setScore(score + n); }
+  function info(s){ feedback.textContent = s; }
+
+  // simple beep
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq=880,dur=0.08){ if(!soundOn) return; try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.2,audioCtx.currentTime+0.01); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur); o.stop(audioCtx.currentTime+dur+0.02);}catch(e){}
+  }
+
+  // Renderers
+  function clearTask(){ taskArea.innerHTML = ''; current = null; info(''); checkBtn.disabled = false; }
+
+  function renderNeeds(){ clearTask();
+    const title = document.createElement('div'); title.className='big'; title.textContent='Needs of Plants'; taskArea.appendChild(title);
+    const p = document.createElement('div'); p.className='hint'; p.style.marginTop='8px'; p.textContent='Identify what plants need to grow: light, water, air, soil.'; taskArea.appendChild(p);
+
+    // multiple choice checkboxes
+    const opts = ['Light (sunlight)','Water','Air','Soil','Sugar (not needed)'];
+    const list = document.createElement('div'); list.style.marginTop='10px';
+    opts.forEach(o=>{ const row=document.createElement('div'); row.className='row'; const cb=document.createElement('input'); cb.type='checkbox'; cb.value=o; cb.id = 'opt_'+o.replace(/\s+/g,'_'); const lbl=document.createElement('label'); lbl.htmlFor = cb.id; lbl.style.marginLeft='6px'; lbl.textContent = o; row.appendChild(cb); row.appendChild(lbl); list.appendChild(row); });
+    taskArea.appendChild(list);
+
+    current = {type:'needs', correct: new Set(['Light (sunlight)','Water','Air','Soil']), inputs: ()=>Array.from(list.querySelectorAll('input')).filter(i=>i.checked).map(i=>i.value)};
+
+    checkBtn.onclick = ()=>{
+      const picked = new Set(current.inputs());
+      const correct = current.correct;
+      if(picked.size===0){ info('Tick at least one box.'); return; }
+      // compare
+      let ok=true; picked.forEach(v=>{ if(!correct.has(v)) ok=false; });
+      // also ensure all correct selected
+      correct.forEach(v=>{ if(!picked.has(v)) ok=false; });
+      if(ok){ addScore(6); info('Excellent — all needs identified! +6 pts'); beep(880); checkBtn.disabled=true; } else { addScore(-1); info('Some selections are incorrect or missing. Try again. (-1pt)'); beep(220); }
+    };
+  }
+
+  function renderLight(){ clearTask(); const title=document.createElement('div'); title.className='big'; title.textContent='Plants & Light'; taskArea.appendChild(title);
+    const p=document.createElement('div'); p.className='hint'; p.style.marginTop='8px'; p.textContent='Sort the pictures into "With Light" and "Without Light" groups.'; taskArea.appendChild(p);
+
+    // simple drag & drop of small images represented by words
+    const bank = document.createElement('div'); bank.style.marginTop='10px'; bank.className='row'; const items = ['Plant in Sun','Plant in Shade','Seedling in Light','Plant in Dark'];
+    items.sort(()=>Math.random()-0.5).forEach(it=>{ const b=document.createElement('div'); b.className='option'; b.textContent=it; b.draggable=true; b.style.userSelect='none'; b.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain',it); }); bank.appendChild(b); });
+    taskArea.appendChild(bank);
+
+    const areas = document.createElement('div'); areas.style.marginTop='12px'; areas.className='row';
+    const withLight=document.createElement('div'); withLight.style.minWidth='140px'; withLight.style.padding='8px'; withLight.style.border='1px dashed #e6edf3'; withLight.innerHTML='<div class="big">With Light</div>'; withLight.addEventListener('dragover',e=>e.preventDefault()); withLight.addEventListener('drop',e=>{ e.preventDefault(); const val=e.dataTransfer.getData('text/plain'); const el = [...bank.children].find(x=>x.textContent===val); if(el) withLight.appendChild(el); });
+    const withoutLight=withLight.cloneNode(true); withoutLight.innerHTML='<div class="big">Without Light</div>';
+    areas.appendChild(withLight); areas.appendChild(withoutLight); taskArea.appendChild(areas);
+
+    current={type:'light', with:withLight, without:withoutLight};
+
+    checkBtn.onclick = ()=>{
+      // evaluate by checking expected placements
+      const correctWith = new Set(['Plant in Sun','Seedling in Light']);
+      const correctWithout = new Set(['Plant in Shade','Plant in Dark']);
+      const gotWith = new Set(Array.from(current.with.querySelectorAll('.option')).map(n=>n.textContent));
+      const gotWithout = new Set(Array.from(current.without.querySelectorAll('.option')).map(n=>n.textContent));
+      let ok = true;
+      if(gotWith.size===0 && gotWithout.size===0){ info('Drag items into groups first.'); return; }
+      correctWith.forEach(x=>{ if(!gotWith.has(x)) ok=false; }); correctWithout.forEach(x=>{ if(!gotWithout.has(x)) ok=false; });
+      // also check no wrong items
+      gotWith.forEach(x=>{ if(!correctWith.has(x)) ok=false; }); gotWithout.forEach(x=>{ if(!correctWithout.has(x)) ok=false; });
+      if(ok){ addScore(6); info('Good sorting! +6 pts'); beep(880); checkBtn.disabled=true; } else { addScore(-1); info('Some items are misplaced. Try again. (-1pt)'); beep(220); }
+    };
+  }
+
+  function renderWater(){ clearTask(); const title=document.createElement('div'); title.className='big'; title.textContent='Plants & Water'; taskArea.appendChild(title);
+    const p=document.createElement('div'); p.className='hint'; p.style.marginTop='8px'; p.textContent='Choose what happens to a plant without water.'; taskArea.appendChild(p);
+
+    const opts = ['Leaves green and firm','Leaves wilt and brown','Plant grows taller quickly','Soil stays moist'];
+    const list=document.createElement('div'); list.style.marginTop='8px'; opts.forEach(o=>{ const r=document.createElement('div'); r.className='row'; const rb=document.createElement('input'); rb.type='radio'; rb.name='water'; rb.value=o; rb.id='w_'+o.replace(/\s+/g,'_'); const lbl=document.createElement('label'); lbl.htmlFor=rb.id; lbl.style.marginLeft='6px'; lbl.textContent=o; r.appendChild(rb); r.appendChild(lbl); list.appendChild(r); }); taskArea.appendChild(list);
+
+    current={type:'water', answer:'Leaves wilt and brown', get: ()=>{ const sel = list.querySelector('input[name="water"]:checked'); return sel?sel.value:''; }};
+
+    checkBtn.onclick = ()=>{ const val = current.get(); if(!val){ info('Choose one option.'); return; } if(val===current.answer){ addScore(5); info('Correct — without water plants wilt. +5 pts'); beep(880); checkBtn.disabled=true; } else{ addScore(-1); info('Not quite — think about what happens when a plant has no water. (-1pt)'); beep(220); } };
+  }
+
+  function renderGarden(){ clearTask(); const title=document.createElement('div'); title.className='big'; title.textContent='Garden Detective (Outdoor)'; taskArea.appendChild(title);
+    const p=document.createElement('div'); p.className='hint'; p.style.marginTop='8px'; p.textContent='Use the checklist outdoors: find one healthy and one unhealthy plant then tick clues.'; taskArea.appendChild(p);
+
+    const checklist = ['Leaves green','Stem firm','Soil moist','Leaves yellow or brown','Droopy'];
+    const table=document.createElement('div'); table.style.marginTop='8px'; checklist.forEach(c=>{ const row=document.createElement('div'); row.className='row'; const cb=document.createElement('input'); cb.type='checkbox'; cb.id='c_'+c.replace(/\s+/g,'_'); const lbl=document.createElement('label'); lbl.htmlFor=cb.id; lbl.style.marginLeft='6px'; lbl.textContent=c; row.appendChild(cb); row.appendChild(lbl); table.appendChild(row); }); taskArea.appendChild(table);
+
+    const note=document.createElement('div'); note.className='hint'; note.style.marginTop='8px'; note.textContent='Teacher: take students to garden and observe. Back in class, tick boxes for the plant you found.'; taskArea.appendChild(note);
+
+    current={type:'garden', checklistElems: table.querySelectorAll('input')};
+
+    checkBtn.onclick = ()=>{ // simple check: at least 3 clues ticked for healthy or >=2 for unhealthy
+      const checked = Array.from(current.checklistElems).filter(i=>i.checked).map(i=>i.id.replace('c_','').replace(/_/g,' '));
+      if(checked.length===0){ info('Tick at least one clue after outdoor observation.'); return; }
+      addScore(4); info('Checklist saved. Discuss observations with class. +4 pts'); beep(880); checkBtn.disabled=true;
+    };
+  }
+
+  function renderSound(){ clearTask(); const title=document.createElement('div'); title.className='big'; title.textContent='Sources of Sound'; taskArea.appendChild(title);
+    const p=document.createElement('div'); p.className='hint'; p.style.marginTop='8px'; p.textContent='Listen (or imagine) then choose whether the source is natural or man-made.'; taskArea.appendChild(p);
+
+    const items = [ {label:'Birdsong', type:'Natural'}, {label:'Car Horn', type:'Man-made'}, {label:'Rain', type:'Natural'}, {label:'Telephone', type:'Man-made'} ];
+    const grid=document.createElement('div'); grid.style.marginTop='10px';
+    items.forEach(it=>{ const row=document.createElement('div'); row.className='row'; const txt=document.createElement('div'); txt.className='option'; txt.textContent = it.label; txt.dataset.type = it.type; // attach
+      // choose buttons
+      const sel = document.createElement('select'); sel.innerHTML = '<option value="">-- choose --</option><option>Natural</option><option>Man-made</option>'; sel.dataset.correct = it.type;
+      row.appendChild(txt); row.appendChild(sel); grid.appendChild(row);
+    }); taskArea.appendChild(grid);
+
+    current={type:'sound', grid:grid};
+
+    checkBtn.onclick = ()=>{ const selects = grid.querySelectorAll('select'); let allChosen=true, allOk=true; selects.forEach(s=>{ if(!s.value) allChosen=false; if(s.value && s.value !== s.dataset.correct) allOk=false; }); if(!allChosen){ info('Choose Natural or Man-made for each item.'); return; } if(allOk){ addScore(6); info('Well done — sound sources correctly identified! +6 pts'); beep(880); checkBtn.disabled=true; } else { addScore(-1); info('Some answers are incorrect. Review the sounds. (-1pt)'); beep(220);} };
+  }
+
+  // Hint behaviour
+  hintBtn.addEventListener('click', ()=>{
+    if(!current){ info('Choose a topic first.'); return; }
+    switch(current.type){
+      case 'needs': info('Think about what a plant needs to make food, stay upright, and get nutrients.'); break;
+      case 'light': info('Plants in light are exposed to sun; in dark they look pale or stretched.'); break;
+      case 'water': info('Plants need water to keep leaves firm and carry nutrients.'); break;
+      case 'garden': info('Look for green leaves, firm stems, and moist soil.'); break;
+      case 'sound': info('Natural sounds come from nature (birds, rain); man-made come from machines (cars, phones).'); break;
+    }
+    addScore(-1);
+  });
+
+  // Topic change
+  topicSel.addEventListener('change', ()=>{ const val = topicSel.value; if(val==='needs') renderNeeds(); else if(val==='light') renderLight(); else if(val==='water') renderWater(); else if(val==='garden') renderGarden(); else if(val==='sound') renderSound(); });
+
+  nextBtn.addEventListener('click', ()=>{ // new task same topic
+    const val = topicSel.value; topicSel.dispatchEvent(new Event('change'));
+    info('New task generated.'); checkBtn.disabled = false;
+  });
+
+  restart.addEventListener('click', ()=>{ if(confirm('Restart and reset score?')){ setScore(0); topicSel.value='needs'; topicSel.dispatchEvent(new Event('change')); } });
+
+  toggleSound.addEventListener('click', ()=>{ soundOn = !soundOn; toggleSound.textContent = 'Sound: ' + (soundOn? 'ON':'OFF'); });
+
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const u = new SpeechSynthesisUtterance('Bismillah ar-Rahman ar-Raheem. May Allah bless our learning.'); window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } else alert('Dua: Bismillah...'); });
+
+  // initial
+  topicSel.dispatchEvent(new Event('change'));
+  setScore(0);
+});
+</script>
+</body>
+</html>
