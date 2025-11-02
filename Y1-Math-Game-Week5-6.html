@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y1 Math — Week 5 & 6 Interactive</title>
+<style>
+  :root{
+    --bg1: #fff9c4; /* warm bright */
+    --panel: #ffffff;
+    --muted: #6b7280;
+    --accent: #ff7a7a;
+    --accent2: #60a5fa;
+    --ok: #16a34a;
+    --shadow: 0 6px 18px rgba(0,0,0,0.12);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:linear-gradient(135deg,var(--bg1) 0%, #d7fbe8 100%);color:#0f172a}
+  .app{max-width:1000px;margin:18px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .controls{display:flex;gap:10px;align-items:center}
+  .panel{background:var(--panel);padding:12px;border-radius:12px;box-shadow:var(--shadow)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.08)}
+  button.ghost{background:transparent;border:2px solid rgba(15,23,42,0.06);color:var(--accent)}
+  button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+  input,select{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+  .grid{display:grid;gap:10px}
+  .two{grid-template-columns:1fr 320px}
+  @media(max-width:880px){.two{grid-template-columns:1fr}}
+  .big{font-weight:700;font-size:16px}
+  .hint{color:var(--muted);font-size:13px}
+  .score{font-weight:700;color:#0b945e}
+  .stars{font-size:18px;color:gold}
+  .progress{height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#34d399);width:0%}
+  .option{background:#f8fafc;padding:10px;border-radius:10px;border:1px dashed #e6edf3;cursor:pointer;text-align:center}
+  .option.selected{background:#60a5fa;color:white;border:none}
+  .option.correct{background:var(--ok);color:white}
+  .canvas-wrap{background:#fff;padding:8px;border-radius:10px;border:1px dashed #e6edf3}
+  .small{font-size:13px;color:var(--muted)}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y1 Math — Week 5 & 6 Interactive</h1>
+      <div class="sub">Counting 2s & 10s • Shapes (2D & 3D) • Sketching • Warm dua & Islamic links</div>
+    </div>
+    <div class="controls">
+      <div class="score panel">Score: <span id="score">0</span> pts</div>
+      <div class="stars panel">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="restart" class="ghost">Restart</button>
+    </div>
+  </header>
+
+  <main style="margin-top:14px" class="grid two">
+    <section class="panel" id="left">
+      <div class="big">Activity</div>
+      <div style="margin-top:8px" id="taskArea"></div>
+      <div style="margin-top:12px" class="row">
+        <button id="checkBtn">Check Answer</button>
+        <button id="nextBtn" class="secondary">Next</button>
+        <button id="hintBtn" class="ghost">Hint</button>
+      </div>
+      <div style="margin-top:10px" class="progress"><i id="prog"></i></div>
+      <div id="feedback" style="margin-top:10px" class="small"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="big">Teacher Prompts & Controls</div>
+      <div class="hint" style="margin-top:8px">Use the controls to guide class — click "Next" when the group finishes. Press "Hint" to help students. Sketch area allows digital drawing for shape tasks.</div>
+
+      <div style="margin-top:12px">
+        <label for="mode" class="small">Choose Activity:</label><br/>
+        <select id="mode" style="width:100%;margin-top:6px">
+          <option value="count2">Counting by 2s (Week 5)</option>
+          <option value="count10">Counting by 10s (Week 6)</option>
+          <option value="shapes2d">2D Shape ID</option>
+          <option value="shapes3d">3D Shape Match</option>
+          <option value="sketch">Sketch a Shape (drawing)</option>
+        </select>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="small">Mini-controls</div>
+        <div style="margin-top:6px" class="row">
+          <button id="playDua" class="ghost">Play Dua (short)</button>
+          <button id="toggleSound" class="ghost">Sound: ON</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Progress</div>
+        <div class="small" style="margin-top:6px">Complete activities to earn stars. Encourage dua and reflection after each task.</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Tip: Start each lesson with "Assalamualaikum" and a short dua. Link counting/patterns to pairs in Allah's creation (Quran 51:49).
+  </footer>
+</div>
+
+<script>
+/* Y1 Week5&6 Interactive Game
+   - Built to avoid missing DOM listeners: waits for DOMContentLoaded.
+   - Prevents score abuse: checkBtn disabled after checking until next question.
+   - Restart resets all state.
+*/
+
+document.addEventListener('DOMContentLoaded', ()=>{
+
+  // Elements
+  const modeSel = document.getElementById('mode');
+  const taskArea = document.getElementById('taskArea');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const restartBtn = document.getElementById('restart');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const prog = document.getElementById('prog');
+  const feedback = document.getElementById('feedback');
+  const playDua = document.getElementById('playDua');
+  const toggleSound = document.getElementById('toggleSound');
+
+  // State
+  let score = 0, stars = 0;
+  let stepProgress = 0; // 0..100
+  let currentTask = null; // object for checking
+  let soundOn = true;
+
+  // WebAudio beep for feedback
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq=880, duration=0.12){
+    if(!soundOn) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    o.stop(audioCtx.currentTime + duration + 0.02);
+  }
+
+  // Utilities
+  function setScore(n){
+    score = n; scoreEl.textContent = score;
+    updateStars();
+  }
+  function addScore(n){
+    score = Math.max(0, score + n); scoreEl.textContent = score;
+    updateStars();
+  }
+  function updateStars(){
+    // simple threshold stars
+    stars = score >= 30 ? 3 : score >= 18 ? 2 : score >= 8 ? 1 : 0;
+    starsEl.textContent = '★'.repeat(stars) + '☆'.repeat(3-stars);
+  }
+  function setProgress(p){
+    stepProgress = Math.max(0, Math.min(100, p));
+    prog.style.width = stepProgress + '%';
+  }
+  function lockCheck(){
+    checkBtn.disabled = true;
+  }
+  function unlockCheck(){
+    checkBtn.disabled = false;
+  }
+  function info(msg){
+    feedback.textContent = msg;
+  }
+
+  // Restart
+  function resetAll(){
+    setScore(0); setProgress(0); info('');
+    currentTask = null;
+    // render current mode
+    renderMode(modeSel.value);
+  }
+
+  // Mode renderers
+  function renderMode(mode){
+    // clear
+    taskArea.innerHTML = '';
+    unlockCheck();
+    nextBtn.disabled = false;
+    info('');
+    if(mode === 'count2') renderCount2();
+    else if(mode === 'count10') renderCount10();
+    else if(mode === 'shapes2d') renderShapes2D();
+    else if(mode === 'shapes3d') renderShapes3D();
+    else if(mode === 'sketch') renderSketch();
+  }
+
+  // Counting by 2s: generate sequences forward/backward, missing number fill
+  function renderCount2(){
+    const intro = document.createElement('div');
+    intro.innerHTML = `<div class="big">Counting by 2s</div><div class="hint">Count forward and backward in twos (0–20). Identify the missing numbers.</div>`;
+    taskArea.appendChild(intro);
+
+    // create a sequence with one missing spot
+    const start = Math.floor(Math.random()*6)*2; // 0,2,4,...,10
+    const direction = Math.random()<0.5 ? 'forward' : 'back';
+    const seq = [];
+    if(direction === 'forward'){
+      for(let i=0;i<6;i++) seq.push(start + 2*i);
+    } else {
+      // backward from a start between 20..10
+      const s = 20 - Math.floor(Math.random()*6)*2;
+      for(let i=0;i<6;i++) seq.push(s - 2*i);
+    }
+    const missIdx = 1 + Math.floor(Math.random()*4); // hide inner
+    const correct = seq[missIdx];
+    const row = document.createElement('div');
+    row.className = 'row';
+    seq.forEach((v,i)=>{
+      const box = document.createElement('div');
+      box.style.minWidth='48px'; box.style.padding='8px';
+      box.style.border='1px solid #e6edf3'; box.style.borderRadius='8px'; box.style.textAlign='center';
+      if(i===missIdx){
+        const input = document.createElement('input');
+        input.type='number'; input.style.width='80px'; input.placeholder='?';
+        input.id = 'count2_input';
+        box.appendChild(input);
+      } else {
+        box.textContent = v;
+        box.style.background='#f8fafc'; box.style.border='1px dashed #e6edf3';
+      }
+      row.appendChild(box);
+    });
+    taskArea.appendChild(row);
+    currentTask = {type:'count2', answer: String(correct)};
+
+    checkBtn.onclick = ()=>{ // one-time check until Next
+      const val = document.getElementById('count2_input').value.trim();
+      if(val === ''){ info('Please enter a number.'); return; }
+      if(val === currentTask.answer){
+        addScore(4); info('Correct! +4 pts.'); beep(880,0.08);
+        setProgress(stepProgress+20);
+        lockCheck();
+      } else {
+        addScore(-1); info('Not quite — try again or press Hint. (-1pt)');
+        beep(220,0.08);
+      }
+    };
+  }
+
+  // Counting by 10s
+  function renderCount10(){
+    const intro = document.createElement('div');
+    intro.innerHTML = `<div class="big">Counting by 10s</div><div class="hint">Count in tens (0,10,20...). Fill the missing value and try backward too.</div>`;
+    taskArea.appendChild(intro);
+
+    // produce example with two missing spots
+    const start = 0 + Math.floor(Math.random()*6)*10; // 0..50
+    const seq = [];
+    for(let i=0;i<6;i++) seq.push(start + 10*i);
+    const missIdx1 = Math.floor(Math.random()*4)+1;
+    const missIdx2 = missIdx1 + 1; // two consecutive missing
+    const correct1 = seq[missIdx1], correct2 = seq[missIdx2];
+    const row = document.createElement('div'); row.className='row';
+    seq.forEach((v,i)=>{
+      const box = document.createElement('div'); box.style.minWidth='48px'; box.style.padding='8px'; box.style.border='1px solid #e6edf3'; box.style.borderRadius='8px'; box.style.textAlign='center';
+      if(i===missIdx1 || i===missIdx2){
+        const input = document.createElement('input'); input.type='number'; input.style.width='60px';
+        input.id = 'count10_input_'+i; box.appendChild(input);
+      } else {
+        box.textContent = v; box.style.background='#f8fafc'; box.style.border='1px dashed #e6edf3';
+      }
+      row.appendChild(box);
+    });
+    taskArea.appendChild(row);
+    currentTask = {type:'count10', answers:[String(correct1), String(correct2)]};
+
+    checkBtn.onclick = ()=>{
+      const v1 = (document.getElementById('count10_input_'+missIdx1)||{}).value || '';
+      const v2 = (document.getElementById('count10_input_'+missIdx2)||{}).value || '';
+      if(v1==='' || v2===''){ info('Fill both boxes.'); return; }
+      if(v1===currentTask.answers[0] && v2===currentTask.answers[1]){
+        addScore(5); info('Great! +5 pts.'); beep(880,0.08);
+        setProgress(stepProgress+25); lockCheck();
+      } else {
+        addScore(-1); info('Try again or use Hint. (-1pt)'); beep(220,0.08);
+      }
+    };
+  }
+
+  // 2D shapes identification
+  function renderShapes2D(){
+    const intro = document.createElement('div');
+    intro.innerHTML = `<div class="big">2D Shapes</div><div class="hint">Click the correct shape name for each picture.</div>`;
+    taskArea.appendChild(intro);
+
+    // Example set
+    const shapes = [
+      {name:'Circle', draws:'○'},
+      {name:'Square', draws:'▢'},
+      {name:'Triangle', draws:'△'},
+      {name:'Rectangle', draws:'▭'}
+    ];
+    // pick one to ask
+    const idx = Math.floor(Math.random()*shapes.length);
+    const target = shapes[idx];
+    const picture = document.createElement('div'); picture.style.fontSize='48px'; picture.style.margin='8px 0'; picture.textContent = target.draws;
+    taskArea.appendChild(picture);
+    const optionsRow = document.createElement('div'); optionsRow.className='row';
+    shapes.map(s=>s.name).sort(()=>Math.random()-0.5).forEach(name=>{
+      const opt = document.createElement('div'); opt.className='option'; opt.textContent = name;
+      opt.onclick = ()=>{ // one selection only
+        optionsRow.querySelectorAll('.option').forEach(o=>o.classList.remove('selected'));
+        opt.classList.add('selected');
+      };
+      optionsRow.appendChild(opt);
+    });
+    taskArea.appendChild(optionsRow);
+    currentTask = {type:'shape2d', answer: target.name};
+
+    checkBtn.onclick = ()=>{
+      const sel = optionsRow.querySelector('.option.selected');
+      if(!sel){ info('Choose an option.'); return; }
+      if(sel.textContent === currentTask.answer){
+        sel.classList.add('correct');
+        addScore(4); info('Correct! +4 pts'); beep(880,0.08); setProgress(stepProgress+20); lockCheck();
+      } else {
+        addScore(-1); info('Not correct — try again. (-1pt)'); beep(220,0.08);
+      }
+    };
+  }
+
+  // 3D shapes match (cube, sphere, cone, cylinder)
+  function renderShapes3D(){
+    const intro = document.createElement('div'); intro.innerHTML=`<div class="big">3D Shapes</div><div class="hint">Match each object with its name. Click a picture then choose name.</div>`;
+    taskArea.appendChild(intro);
+
+    const objects = [
+      {label:'Ball', shape:'Sphere'},
+      {label:'Box', shape:'Cube'},
+      {label:'Ice-cream cone', shape:'Cone'},
+      {label:'Can', shape:'Cylinder'}
+    ];
+    // shuffle
+    const shuffled = objects.sort(()=>Math.random()-0.5);
+    // create cards and dropdowns
+    shuffled.forEach((obj,i)=>{
+      const row = document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+      const pic = document.createElement('div'); pic.className='panel'; pic.style.minWidth='120px'; pic.textContent = obj.label;
+      const sel = document.createElement('select'); sel.innerHTML = '<option value="">-- choose --</option><option>Sphere</option><option>Cube</option><option>Cone</option><option>Cylinder</option>';
+      sel.dataset.correct = obj.shape;
+      row.appendChild(pic); row.appendChild(sel);
+      taskArea.appendChild(row);
+    });
+    currentTask = {type:'shape3d', count: objects.length};
+
+    checkBtn.onclick = ()=>{
+      const selects = taskArea.querySelectorAll('select');
+      let allChosen = true, allOk = true;
+      selects.forEach(s=>{
+        if(!s.value) allChosen = false;
+        if(s.value && s.value !== s.dataset.correct) allOk = false;
+      });
+      if(!allChosen){ info('Please choose for every object.'); return; }
+      if(allOk){
+        addScore(8); info('Excellent — all matched! +8 pts'); beep(880,0.08); setProgress(stepProgress+40); lockCheck();
+      } else {
+        addScore(-1); info('Some are incorrect. Check hints. (-1pt)'); beep(220,0.08);
+      }
+    };
+  }
+
+  // Sketch canvas for drawing shapes (students can draw a circle/triangle etc.)
+  function renderSketch(){
+    const intro = document.createElement('div'); intro.innerHTML = `<div class="big">Sketch a Shape</div><div class="hint">Use the canvas to draw the asked shape (e.g., draw a triangle). Teacher will check the drawing.</div>`;
+    taskArea.appendChild(intro);
+
+    const shapeChoices = ['Draw a circle','Draw a triangle','Draw a square','Draw an oval'];
+    const prompt = shapeChoices[Math.floor(Math.random()*shapeChoices.length)];
+    const p = document.createElement('div'); p.textContent = 'Task: ' + prompt; p.style.marginTop='8px';
+    taskArea.appendChild(p);
+
+    // Canvas
+    const canvasWrap = document.createElement('div'); canvasWrap.className='canvas-wrap'; canvasWrap.style.marginTop='8px';
+    const canvas = document.createElement('canvas'); canvas.width = 420; canvas.height = 240; canvas.style.touchAction='none'; canvas.style.borderRadius='8px'; canvas.style.background='#ffffff';
+    canvasWrap.appendChild(canvas);
+    const row = document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+    const clearBtn = document.createElement('button'); clearBtn.textContent='Clear';
+    const doneNote = document.createElement('div'); doneNote.className='small'; doneNote.textContent='When finished press Check Answer.';
+    row.appendChild(clearBtn); row.appendChild(doneNote);
+    taskArea.appendChild(canvasWrap); taskArea.appendChild(row);
+
+    // drawing logic
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 3; ctx.lineCap='round'; ctx.strokeStyle='#0f172a';
+    let drawing=false;
+    function startDraw(e){
+      drawing=true;
+      ctx.beginPath();
+      const r = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+      ctx.moveTo(x,y);
+    }
+    function moveDraw(e){
+      if(!drawing) return;
+      const r = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+      ctx.lineTo(x,y); ctx.stroke();
+    }
+    function endDraw(){ drawing=false; ctx.closePath(); }
+    canvas.addEventListener('pointerdown', startDraw);
+    canvas.addEventListener('pointermove', moveDraw);
+    window.addEventListener('pointerup', endDraw);
+    clearBtn.onclick = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); };
+
+    currentTask = {type:'sketch', prompt: prompt, canvas: canvas};
+
+    checkBtn.onclick = ()=>{
+      // For Year1 teacher checking, we'll accept any non-empty drawing as a submission.
+      // Detect if canvas has any ink
+      const pixels = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      let nonEmpty=false;
+      for(let i=0;i<pixels.length;i+=4){ if(pixels[i+3] !== 0){ nonEmpty=true; break; } }
+      if(!nonEmpty){ info('Please draw your shape before checking.'); return; }
+      // Mark as submitted — teacher can accept or give feedback manually.
+      addScore(6); info('Drawing submitted — teacher review. +6 pts'); beep(880,0.09);
+      setProgress(stepProgress+33); lockCheck();
+    };
+  }
+
+  // Hint button — simple contextual hints
+  hintBtn.addEventListener('click', ()=>{
+    if(!currentTask){ info('Choose an activity first.'); return; }
+    switch(currentTask.type){
+      case 'count2':
+        info('Hint: add or subtract 2 each time. Try dividing the missing number by 2 if stuck.');
+        break;
+      case 'count10':
+        info('Hint: multiples of 10 end with 0. Count 10,20,30...');
+        break;
+      case 'shape2d':
+        info('Hint: A circle has no corners; square has 4 equal sides.');
+        break;
+      case 'shape3d':
+        info('Hint: A ball is a sphere; a box is a cube.');
+        break;
+      case 'sketch':
+        info('Hint: Try drawing an equilateral triangle or a round circle — use simple lines.');
+        break;
+      default:
+        info('Try thinking step-by-step.');
+    }
+    addScore(-1); // small penalty for hint
+  });
+
+  // Mode selector
+  modeSel.addEventListener('change', ()=>{ renderMode(modeSel.value); });
+
+  // Next button moves to new random task in same mode
+  nextBtn.addEventListener('click', ()=>{
+    // allow next even if checkBtn locked — but unlock checking for new
+    unlockCheck(); info('');
+    renderMode(modeSel.value);
+  });
+
+  // Restart
+  restartBtn.addEventListener('click', ()=>{
+    if(confirm('Restart the game and reset score?')){
+      resetAll();
+    }
+  });
+
+  // Toggle sound
+  toggleSound.addEventListener('click', ()=>{
+    soundOn = !soundOn;
+    toggleSound.textContent = 'Sound: ' + (soundOn ? 'ON' : 'OFF');
+  });
+
+  // Play a short dua audio using simple speech (fallback)
+  playDua.addEventListener('click', ()=>{
+    // Short spoken dua (using Web Speech if available)
+    if('speechSynthesis' in window){
+      const s = new SpeechSynthesisUtterance('بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ. O Allah, help us learn and remember.');
+      s.lang = 'en-US';
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(s);
+    } else {
+      alert('Dua: Bismillah ar-Rahman ar-Raheem — may Allah make our learning blessed.');
+    }
+  });
+
+  // prevent double scoring by disabling check until Next/unlock
+  // initial render
+  renderMode(modeSel.value);
+  setScore(0);
+  setProgress(0);
+  info('Begin: say Assalamualaikum and start with a short dua. Click Check when ready.');
+
+}); // DOM loaded
+</script>
+</body>
+</html>

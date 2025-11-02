@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y6 Geometry & Algebra — Week 5 & 6 Interactive</title>
+<style>
+:root{--bg:#f7fff4;--card:#ffffff;--muted:#6b7280;--accent:#4b9be6;--accent2:#34d399;--ok:#16a34a;--warn:#f59e0b;--shadow:0 8px 24px rgba(15,23,42,0.06);--font:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:linear-gradient(135deg,#fffbf0 0%,#f0fff7 100%);color:#0f172a}
+.app{max-width:1150px;margin:18px auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tab{background:var(--card);border:1px solid rgba(15,23,42,0.06);padding:8px 12px;border-radius:10px;cursor:pointer}
+.tab.active{box-shadow:0 6px 18px rgba(0,0,0,0.06);border-color:var(--accent)}
+.container{display:grid;gap:16px;margin-top:16px}
+@media(min-width:1000px){.container{grid-template-columns:1fr 360px}}
+.card{background:var(--card);padding:14px;border-radius:12px;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.big{font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+.button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+.button.ghost{background:transparent;color:var(--accent);border:2px solid rgba(15,23,42,0.06)}
+.button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+input,select,textarea{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+.progress{height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),#60a5fa);width:0%}
+.small{font-size:13px;color:var(--muted)}
+.canvas-wrap{background:#fff;padding:8px;border-radius:10px;border:1px dashed #e6edf3}
+.tools{display:flex;gap:8px;margin-top:8px}
+.panel-title{font-weight:700;margin-bottom:6px}
+.score{font-weight:700;color:#0b945e}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y6 Geometry & Algebra — Week 5 & 6 Interactive</h1>
+      <div class="sub">3D shapes & compound solids • Nets, surface area, volume & capacity • Variables in addition & subtraction</div>
+      <div class="tabs" style="margin-top:12px">
+        <button class="tab active" data-tab="compound">Compound Solids</button>
+        <button class="tab" data-tab="nets">Nets & Surface Area</button>
+        <button class="tab" data-tab="volume">Volume & Capacity</button>
+        <button class="tab" data-tab="variables">Variables (x, y)</button>
+        <button class="tab" data-tab="practice">Mixed Practice</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card small">Score: <b id="score">0</b></div>
+      <div class="card small">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="reset" class="button ghost">Restart</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <main id="main" class="card">
+      <div id="view"></div>
+    </main>
+
+    <aside class="card">
+      <div class="big">Teacher Panel & Prompts</div>
+      <div class="small hint" style="margin-top:8px">Begin with a short dua. Use hints (-1 pt). Encourage Islamic reflection (Amanah, Aql) and Eco links (reuse, balance).</div>
+      <div style="margin-top:12px" class="row">
+        <button id="hintBtn" class="button ghost">Hint (-1 pt)</button>
+        <button id="checkBtn" class="button">Check Answer</button>
+        <button id="nextBtn" class="button secondary">Next</button>
+      </div>
+
+      <div style="margin-top:12px" class="small">
+        <div><b>Progress</b></div>
+        <div class="progress" style="margin-top:6px"><i id="progBar"></i></div>
+        <div id="feedback" style="margin-top:8px"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Quick Dua</div>
+        <div class="small" style="margin-top:6px">Play a short dua to start the class.</div>
+        <div style="margin-top:6px"><button id="playDua" class="button ghost">Play Dua</button></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer style="margin-top:12px" class="small">
+    Tip: Use real models (boxes, bottles) and unit cubes. Link tasks to the learning objectives and integration values (ISSC7, ISIC2, ECOE5).
+  </footer>
+</div>
+
+<script>
+// Y6 interactive — robust DOM load
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Elements
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const view = document.getElementById('view');
+  const hintBtn = document.getElementById('hintBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('reset');
+  const progBar = document.getElementById('progBar');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const playDua = document.getElementById('playDua');
+
+  // State
+  let score = 0, stars = 0, progress = 0; let current = null; let soundOn = true;
+  function updateUI(){ scoreEl.textContent = score; starsEl.textContent = '★'.repeat(stars) + '☆'.repeat(3-stars); progBar.style.width = progress + '%'; }
+  function addScore(n){ score = Math.max(0, score + n); stars = score>=60?3:score>=35?2:score>=15?1:0; updateUI(); }
+  function setFeedback(msg){ feedback.textContent = msg || ''; }
+
+  // simple beep
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq=880,dur=0.08){ try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.2,audioCtx.currentTime+0.01); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur); o.stop(audioCtx.currentTime+dur+0.02);}catch(e){} }
+
+  // Tab handlers
+  tabs.forEach(t=>t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); renderTab(t.dataset.tab); }));
+
+  function renderTab(id){ current = null; setFeedback(''); checkBtn.disabled = false; nextBtn.disabled = false; if(id==='compound') renderCompound(); else if(id==='nets') renderNets(); else if(id==='volume') renderVolume(); else if(id==='variables') renderVariables(); else if(id==='practice') renderPractice(); }
+
+  // ---------- Compound Solids ----------
+  function renderCompound(){ view.innerHTML = '';
+    const title = document.createElement('div'); title.className='big'; title.textContent='Compound Solids — Visualise & Describe'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.textContent='Combine up to 3 solids — describe faces, edges & vertices.'; view.appendChild(hint);
+
+    const demo = document.createElement('div'); demo.style.marginTop='12px'; demo.innerHTML = `
+      <div class="panel-title">Example: Cuboid + Half-cylinder (roof)</div>
+      <div class="small">Properties to note: faces (rectangles, semicircles), edges where shapes meet, vertices count (approx).</div>
+    `;
+    view.appendChild(demo);
+
+    // interactive builder — pick two solids to combine
+    const tools = document.createElement('div'); tools.className='row'; tools.style.marginTop='12px';
+    const leftSel = document.createElement('select'); ['Cuboid','Cube','Cylinder','Cone','Pyramid','Triangular Prism','Sphere'].forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; leftSel.appendChild(o); });
+    const rightSel = leftSel.cloneNode(true);
+    const combineBtn = document.createElement('button'); combineBtn.className='button'; combineBtn.textContent='Combine';
+    tools.appendChild(leftSel); tools.appendChild(document.createTextNode(' + ')); tools.appendChild(rightSel); tools.appendChild(combineBtn);
+    view.appendChild(tools);
+
+    const out = document.createElement('div'); out.style.marginTop='12px'; view.appendChild(out);
+
+    combineBtn.onclick = ()=>{
+      const a = leftSel.value, b = rightSel.value; out.innerHTML = `<div class="big">Result: ${a} + ${b}</div>`+
+        `<div class="small" style="margin-top:6px">Describe: Faces: ___ (list); Edges: ___; Vertices: ___</div>`+
+        `<div style="margin-top:8px"><textarea id="compound_desc" rows="4" style="width:100%" placeholder="Write your description and label faces..."></textarea></div>`;
+      current = {type:'compound', shapes:[a,b], answerField:document.getElementById('compound_desc')};
+    };
+
+    checkBtn.onclick = ()=>{
+      if(!current || current.type!=='compound'){ setFeedback('Press Combine and write your description first.'); return; }
+      const txt = current.answerField.value.trim(); if(!txt){ setFeedback('Write a description of faces, edges and vertices.'); return; }
+      addScore(8); progressAdd(12); setFeedback('Good description — discuss as a class. +8 pts'); beep(880);
+      lockCheck();
+    };
+  }
+
+  // ---------- Nets & Surface Area ----------
+  function renderNets(){ view.innerHTML = '';
+    const title = document.createElement('div'); title.className='big'; title.textContent='Nets & Surface Area — Build & Calculate'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.textContent='Use the sketch area to draw a net; calculate the total surface area.'; view.appendChild(hint);
+
+    // task selector
+    const selRow = document.createElement('div'); selRow.className='row'; selRow.style.marginTop='12px';
+    const shapeSel = document.createElement('select'); ['Cube (s)','Cuboid (l,w,h)','Square-based Pyramid (s,h)','Triangular Prism (b,h,l)'].forEach(s=>{ const o=document.createElement('option'); o.textContent=s; shapeSel.appendChild(o); });
+    selRow.appendChild(shapeSel);
+    const genBtn = document.createElement('button'); genBtn.className='button'; genBtn.textContent='Generate Task'; selRow.appendChild(genBtn);
+    view.appendChild(selRow);
+
+    const taskDiv = document.createElement('div'); taskDiv.style.marginTop='12px'; view.appendChild(taskDiv);
+
+    // sketch canvas (for nets)
+    const sketchWrap = document.createElement('div'); sketchWrap.className='canvas-wrap'; sketchWrap.style.marginTop='12px'; sketchWrap.innerHTML = `<div class="small">Sketch area: draw the net</div><canvas id="netCanvas" width="700" height="320" style="border-radius:8px;background:#fff;margin-top:8px"></canvas><div class="tools"><button id="clearNet" class="button ghost">Clear</button><button id="saveNet" class="button secondary">Save (teacher)</button></div>`;
+    view.appendChild(sketchWrap);
+
+    const ansRow = document.createElement('div'); ansRow.style.marginTop='12px'; ansRow.innerHTML = `<div class="small">Enter calculation (show working):</div><textarea id="sa_work" rows="4" style="width:100%" placeholder="e.g. 6 faces × 4×4 = 96 cm²"></textarea>`;
+    view.appendChild(ansRow);
+
+    genBtn.onclick = ()=>{
+      const choice = shapeSel.value;
+      const params = randomParamsFor(choice);
+      taskDiv.innerHTML = `<div class="big">Task: ${choice}</div><div class="small" style="margin-top:6px">Dimensions: ${params.label}</div>`;
+      current = {type:'nets', shape:choice, params:params, workField:document.getElementById('sa_work')};
+      // prepare canvas handlers
+      setupNetCanvas();
+    };
+
+    // helpers
+    function randomParamsFor(choice){ if(choice.startsWith('Cube')){ const s= 2+Math.floor(Math.random()*6); return {s, label:`side = ${s} cm`, answer:6*(s*s)} } if(choice.startsWith('Cuboid')){ const l=2+Math.floor(Math.random()*8), w=2+Math.floor(Math.random()*6), h=2+Math.floor(Math.random()*6); return {l,w,h,label:`l=${l}cm, w=${w}cm, h=${h}cm`, answer:2*(l*w + l*h + w*h)} } if(choice.startsWith('Square')){ const s=3+Math.floor(Math.random()*6), h=3+Math.floor(Math.random()*6); // pyramid area = base + 4 triangles (slant height ignored approx)
+        const base = s*s; const tri = 4*( (s* (Math.sqrt((s/2)*(s/2) + h*h)) )/2 ); const ans = Math.round(base + tri);
+        return {s,h,label:`base side=${s}cm, slant/height≈${h}cm (use given)`, answer:ans}; }
+      if(choice.startsWith('Triangular')){ const b=3+Math.floor(Math.random()*6), h=3+Math.floor(Math.random()*6), l=4+Math.floor(Math.random()*8); const triArea = (b*h)/2; const rect1 = b*l; const rect2 = b*l; const rect3 = (Math.sqrt((b/2)*(b/2)+h*h))*l; return {b,h,l,label:`b=${b}cm,h=${h}cm,l=${l}cm`, answer: Math.round(2*triArea + rect1 + rect2 + rect3)} }
+      return {label:'n/a', answer:0};
+    }
+
+    // canvas drawing
+    function setupNetCanvas(){ const canvas = document.getElementById('netCanvas'); const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='#0f172a'; ctx.lineWidth=2; let drawing=false; function start(e){ drawing=true; ctx.beginPath(); const r=canvas.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; ctx.moveTo(x,y);} function move(e){ if(!drawing) return; const r=canvas.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; ctx.lineTo(x,y); ctx.stroke(); } function end(){ drawing=false; ctx.closePath(); }
+      canvas.addEventListener('pointerdown', start); canvas.addEventListener('pointermove', move); window.addEventListener('pointerup', end);
+      document.getElementById('clearNet').onclick = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); };
+      document.getElementById('saveNet').onclick = ()=>{ const data = canvas.toDataURL(); setFeedback('Net saved (teacher view).'); addScore(2); }
+    }
+
+    checkBtn.onclick = ()=>{
+      if(!current || current.type!=='nets'){ setFeedback('Generate a net task first.'); return; }
+      const work = current.workField.value.trim(); if(!work){ setFeedback('Show your working and final area calculation.'); return; }
+      // quick numeric check for final numeric answer in text
+      const found = String(current.params.answer);
+      if(work.indexOf(found)!==-1){ addScore(12); progressAdd(15); setFeedback('Correct surface area (matching numeric answer). +12 pts — review working.'); beep(880); lockCheck(); }
+      else{ addScore(-1); setFeedback('Final numeric answer does not match expected. Check calculations. (-1pt)'); beep(220); }
+    };
+  }
+
+  // ---------- Volume & Capacity ----------
+  function renderVolume(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Volume & Capacity — Calculate & Compare'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.textContent='Find volumes (cm³) and relate to capacity (litres = 1000 cm³).'; view.appendChild(hint);
+
+    // generate question: cuboid or cube or triangular prism
+    const types = ['Cuboid','Cube','Triangular Prism']; const type = types[Math.floor(Math.random()*types.length)];
+    let qHTML=''; let answer=0;
+    if(type==='Cube'){ const s=3+Math.floor(Math.random()*7); answer = s*s*s; qHTML = `A cube has side ${s} cm. Find its volume in cm³ and convert to litres (to 2 d.p.).`; }
+    if(type==='Cuboid'){ const l=5+Math.floor(Math.random()*6), w=2+Math.floor(Math.random()*6), h=3+Math.floor(Math.random()*6); answer = l*w*h; qHTML = `A cuboid has dimensions ${l} cm × ${w} cm × ${h} cm. Find its volume in cm³ and convert to litres.`; }
+    if(type==='Triangular Prism'){ const b=4+Math.floor(Math.random()*6), h=3+Math.floor(Math.random()*5), L=6+Math.floor(Math.random()*6); answer = (b*h/2)*L; qHTML = `A triangular prism has base ${b} cm, triangle height ${h} cm and prism length ${L} cm. Find its volume in cm³.`; }
+    const qDiv = document.createElement('div'); qDiv.style.marginTop='12px'; qDiv.innerHTML = `<div class="small">${qHTML}</div><div style="margin-top:8px"><input id="vol_ans" placeholder="answer (cm3)"/></div><div style="margin-top:6px" class="small">(If conversion to litres needed, teacher will check)</div>`;
+    view.appendChild(qDiv);
+    current = {type:'volume', answer: String(Math.round(answer)), raw:answer};
+    checkBtn.onclick = ()=>{ const val = (document.getElementById('vol_ans')||{}).value.trim(); if(!val){ setFeedback('Enter volume in cm³'); return; } if(val === current.answer){ addScore(10); progressAdd(15); setFeedback('Correct volume! +10 pts'); beep(880); lockCheck(); } else { addScore(-1); setFeedback('Incorrect — check formula and units. (-1pt)'); beep(220); } };
+  }
+
+  // ---------- Variables ----------
+  function renderVariables(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Variables in Addition & Subtraction'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.textContent='Solve one-step equations and explain variables as unknowns.'; view.appendChild(hint);
+
+    // generate simple eqn
+    const a = 5+Math.floor(Math.random()*15); const x = 1+Math.floor(Math.random()*9); const eqType = Math.random()<0.5?'add':'sub'; let eq=''; let ans=0;
+    if(eqType==='add'){ eq = `x + ${a} = ${a + x}`; ans = x; }
+    else { eq = `${a + x} - x = ${a}`; ans = x; eq = `y + ${x} = ${a + x}`; ans = x; }
+
+    const q = document.createElement('div'); q.style.marginTop='12px'; q.innerHTML = `<div class="small">Solve: <b>${eq}</b></div><div style="margin-top:8px"><input id="var_ans" placeholder="value of variable (number)"/></div><div style="margin-top:6px"><textarea id="var_explain" rows="3" style="width:100%" placeholder="Explain in words how you found the variable (one or two sentences)"></textarea></div>`;
+    view.appendChild(q);
+    current = {type:'vars', answer:String(ans), explainField:document.getElementById('var_explain')};
+
+    // attach input after inserted
+    setTimeout(()=>{ current.input = document.getElementById('var_ans'); },0);
+
+    checkBtn.onclick = ()=>{ if(!current || current.type!=='vars'){ setFeedback('Start the variables task.'); return; } const val = (current.input||{}).value || ''; const expl = (current.explainField||{}).value || ''; if(val.trim()===current.answer && expl.trim().length>5){ addScore(8); progressAdd(12); setFeedback('Well done — correct value and explanation. +8 pts'); beep(880); lockCheck(); } else if(val.trim()===current.answer){ addScore(4); setFeedback('Correct value but add a clear explanation. +4 pts'); beep(880); lockCheck(); } else { addScore(-1); setFeedback('Incorrect — check inverse operations. (-1pt)'); beep(220); } };
+  }
+
+  // ---------- Mixed Practice ----------
+  function renderPractice(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Mixed Practice — 4 quick questions'; view.appendChild(title);
+    const hint = document.createElement('div'); hint.className='small hint'; hint.textContent='One question from each topic (compound/nets/volume/variables).'; view.appendChild(hint);
+
+    // simple pool
+    const q1 = {q:'Combine Cuboid + Cylinder: describe how many faces might change when cylinder attached to top (brief).', type:'text'};
+    const q2 = {q:'Cube side = 5 cm. Surface area? (cm²)', type:'num', ans:6*25};
+    const q3 = {q:'Cuboid 6×4×3 cm. Volume? (cm³)', type:'num', ans:6*4*3};
+    const q4 = {q:'Solve x + 7 = 13', type:'num', ans:6};
+    const pool = [q1,q2,q3,q4];
+
+    const wrap = document.createElement('div'); wrap.style.marginTop='12px'; pool.forEach((p,i)=>{ const div=document.createElement('div'); div.style.marginTop='8px'; div.innerHTML = `<div class="small">Q${i+1}: ${p.q}</div>`; if(p.type==='text'){ div.innerHTML += `<textarea id="mp_${i}" rows="2" style="width:100%" placeholder="Write brief answer"></textarea>` } else { div.innerHTML += `<input id="mp_${i}" placeholder="answer" style="margin-top:6px"/>`; } wrap.appendChild(div); }); view.appendChild(wrap);
+    current = {type:'practice', pool};
+    checkBtn.onclick = ()=>{ let correct=0; pool.forEach((p,i)=>{ const val = (document.getElementById('mp_'+i)||{}).value || ''; if(p.type==='num'){ if(String(p.ans)===String(val).trim()) correct++; } else { if(val.trim().length>3) correct++; } }); addScore(4*correct); progressAdd(20*correct); setFeedback(`You got ${correct}/4 correct. +${4*correct} pts`); beep(880); lockCheck(); };
+  }
+
+  // helpers
+  function lockCheck(){ checkBtn.disabled = true; }
+  function unlockCheck(){ checkBtn.disabled = false; }
+  function progressAdd(n){ progress = Math.min(100, progress + n); updateUI(); }
+
+  // Hint
+  hintBtn.addEventListener('click', ()=>{ if(!current){ setFeedback('Choose a tab/task first.'); return; } switch(current.type){ case 'compound': setFeedback('Describe faces (flat surfaces), edges (lines) and vertices (corners).'); break; case 'nets': setFeedback('Draw each face carefully — count all faces and label dimensions.'); break; case 'volume': setFeedback('Write the formula: cuboid = l×w×h; cube = s³; triangular prism = (1/2×b×h)×L.'); break; case 'vars': setFeedback('Use inverse operations: subtract or add to isolate the variable.'); break; default: setFeedback('Break the question into smaller steps and show working.'); }
+    addScore(-1);
+  });
+
+  // Next — new task in same tab
+  nextBtn.addEventListener('click', ()=>{ const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); unlockCheck(); setFeedback('New task generated.'); });
+
+  // Reset
+  resetBtn.addEventListener('click', ()=>{ if(confirm('Reset score and progress?')){ score=0; progress=0; stars=0; updateUI(); const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); setFeedback('Reset complete.'); } });
+
+  // Dua
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s=new SpeechSynthesisUtterance('Bismillah. O Allah, help us learn and benefit.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); } else alert('Dua: Bismillah. O Allah, help us learn and benefit.'); });
+
+  // initial
+  updateUI(); renderTab('compound');
+
+  // expose small helper
+  window._Y6Game = {addScore, progressAdd, renderTab};
+});
+</script>
+</body>
+</html>

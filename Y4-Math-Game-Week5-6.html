@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y4 Time Literacy — Week 5 & 6 Interactive (Fixed)</title>
+<style>
+:root{--bg1:#fff7e6;--panel:#ffffff;--muted:#6b7280;--accent:#ff8a65;--accent2:#60a5fa;--ok:#16a34a;--shadow:0 8px 24px rgba(15,23,42,0.08);--font:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:linear-gradient(135deg,var(--bg1) 0%, #e6fbf5 100%);color:#0f172a}
+.app{max-width:1180px;margin:18px auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:top;gap:12px}
+h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tab{background:var(--panel);border:1px solid rgba(15,23,42,0.06);padding:8px 12px;border-radius:10px;cursor:pointer}
+.tab.active{box-shadow:0 6px 18px rgba(0,0,0,0.06);border-color:var(--accent)}
+.container{display:grid;gap:16px;margin-top:16px}
+@media(min-width:1000px){.container{grid-template-columns:1fr 380px}}
+.card{background:var(--panel);padding:14px;border-radius:12px;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.big{font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+.button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+.button.ghost{background:transparent;color:var(--accent);border:2px solid rgba(15,23,42,0.06)}
+.button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+input,select{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+.progress{height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),#34d399);width:0%}
+.option{background:#fbfcfd;padding:10px;border-radius:10px;border:1px dashed #e6edf3;cursor:pointer;text-align:center}
+.option.selected{background:var(--accent2);color:white;border:none}
+.small{font-size:13px;color:var(--muted)}
+.clock{width:220px;height:220px;border-radius:50%;background:linear-gradient(180deg,#fff,#f2f9ff);border:6px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,0.06);position:relative}
+.hand{position:absolute;left:50%;top:50%;transform-origin:50% 100%}
+.canvas-wrap{background:#fff;padding:8px;border-radius:10px;border:1px dashed #e6edf3}
+footer{margin-top:12px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y4 Time Literacy — Week 5 & 6 Interactive (Fixed)</h1>
+      <div class="sub">Reading analogue & digital clocks • Timetables • 12/24-hour conversion • Time intervals • Islamic & Eco links</div>
+      <div class="tabs" style="margin-top:12px">
+        <button class="tab active" data-tab="analogue">Analogue ↔ Digital</button>
+        <button class="tab" data-tab="timetable">Timetables & Intervals</button>
+        <button class="tab" data-tab="24hr">24-hour Conversion</button>
+        <button class="tab" data-tab="conversion">Time Conversions</button>
+        <button class="tab" data-tab="practice">Mixed Practice</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card small">Score: <b id="score">0</b></div>
+      <div class="card small">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="reset" class="button ghost">Restart</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <main id="main" class="card">
+      <div id="view"></div>
+    </main>
+
+    <aside class="card">
+      <div class="big">Teacher Panel & Prompts</div>
+      <div class="small hint" style="margin-top:8px">Begin each session with a short dua. Use the hint button to support less able students. Encourage Islamic reflection: punctuality is part of Taqwa. Eco link: relate to sunrise/sunset cycles.</div>
+      <div style="margin-top:12px">
+        <div class="row">
+          <button id="hintBtn" class="button ghost">Hint (-1 pt)</button>
+          <button id="checkBtn" class="button">Check Answer</button>
+          <button id="nextBtn" class="button secondary">Next</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="small">
+        <div><b>Progress</b></div>
+        <div class="progress" style="margin-top:6px"><i id="progBar"></i></div>
+        <div id="feedback" style="margin-top:8px"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Quick Dua</div>
+        <div class="small" style="margin-top:6px">Play a short dua to start the class.</div>
+        <div style="margin-top:6px"><button id="playDua" class="button ghost">Play Dua</button></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    Tip: Link each activity to real-life routines — ask students to plan Salah times and school timetables. End with dua.
+  </footer>
+</div>
+
+<script>
+// Y4 Time Literacy Game — fixed clock hand math and full tab set
+document.addEventListener('DOMContentLoaded', ()=>{
+  const tabs = [...document.querySelectorAll('.tab')];
+  const view = document.getElementById('view');
+  const hintBtn = document.getElementById('hintBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('reset');
+  const progBar = document.getElementById('progBar');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const playDua = document.getElementById('playDua');
+
+  let score=0, stars=0, progress=0, current=null;
+
+  function updateUI(){ scoreEl.textContent=score; starsEl.textContent='★'.repeat(stars)+ '☆'.repeat(3-stars); progBar.style.width = progress + '%'; }
+  function addScore(n){ score = Math.max(0, score + n); stars = score>=40?3:score>=25?2:score>=10?1:0; updateUI(); }
+  function setFeedback(msg){ feedback.textContent = msg||''; }
+  function lockCheck(){ checkBtn.disabled = true; }
+  function unlockCheck(){ checkBtn.disabled = false; }
+  function progressAdd(p){ progress = Math.min(100, progress + p); updateUI(); }
+
+  // audio
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq=880,dur=0.08){ try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.2,audioCtx.currentTime+0.01); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur); o.stop(audioCtx.currentTime+dur+0.02);}catch(e){} }
+
+  tabs.forEach(t=>t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); renderTab(t.dataset.tab); }));
+
+  // Helper: pad
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  // Create analogue clock element with correctly calculated hand angles
+  function createClockElement(hour, minute){
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.gap='12px';
+    const clock = document.createElement('div'); clock.className='clock';
+    // place numbers
+    for(let i=1;i<=12;i++){
+      const ang = (i/12)*Math.PI*2 - Math.PI/2;
+      const x = 110 + Math.cos(ang)*80;
+      const y = 110 + Math.sin(ang)*80;
+      const el = document.createElement('div'); el.style.position='absolute'; el.style.left=(x-10)+'px'; el.style.top=(y-10)+'px'; el.style.width='20px'; el.style.height='20px'; el.style.textAlign='center'; el.style.lineHeight='20px'; el.style.fontSize='13px'; el.textContent = i; clock.appendChild(el);
+    }
+    // correct hand math
+    // hour angle = (hour % 12) * 30 + minute * 0.5
+    // minute angle = minute * 6
+    const hourAngle = ((hour % 12) * 30) + (minute * 0.5);
+    const minuteAngle = minute * 6;
+
+    const hourHand = document.createElement('div'); hourHand.className='hand'; hourHand.style.width='6px'; hourHand.style.height='60px'; hourHand.style.background='#0f172a';
+    hourHand.style.transform = `translate(-50%,-100%) rotate(${hourAngle}deg)`;
+    const minHand = document.createElement('div'); minHand.className='hand'; minHand.style.width='4px'; minHand.style.height='86px'; minHand.style.background='#0f172a';
+    minHand.style.transform = `translate(-50%,-100%) rotate(${minuteAngle}deg)`;
+    const center = document.createElement('div'); center.style.position='absolute'; center.style.left='50%'; center.style.top='50%'; center.style.width='12px'; center.style.height='12px'; center.style.borderRadius='50%'; center.style.background='#0f172a'; center.style.transform='translate(-50%,-50%)';
+
+    clock.appendChild(hourHand); clock.appendChild(minHand); clock.appendChild(center);
+    wrap.appendChild(clock);
+    const dig = document.createElement('div'); dig.style.minWidth='160px'; dig.innerHTML = '<div style="font-weight:700;font-size:18px">Digital</div><div style="font-size:16px;margin-top:8px">' + pad(hour) + ':' + pad(minute) + '</div>';
+    wrap.appendChild(dig);
+
+    return wrap;
+  }
+
+  // TABS
+  function renderTab(id){ current=null; setFeedback(''); unlockCheck(); nextBtn.disabled=false; if(id==='analogue') renderAnalogue(); else if(id==='timetable') renderTimetable(); else if(id==='24hr') render24hr(); else if(id==='conversion') renderConversion(); else if(id==='practice') renderPractice(); }
+
+  // Analogue tab
+  function renderAnalogue(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Read the Clock — Match Analogue to Digital'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Focus on o’clock, half past, quarter past/to and 5-minute intervals.'; view.appendChild(hint);
+    // generate random time in 5-minute steps
+    const hour = Math.floor(Math.random()*12)+1; const minuteOptions=[0,5,10,15,20,25,30,35,40,45,50,55]; const minute = minuteOptions[Math.floor(Math.random()*minuteOptions.length)];
+    const clockEl = createClockElement(hour, minute);
+    view.appendChild(clockEl);
+    const correct = pad(hour%24) + ':' + pad(minute);
+    const opts = new Set([correct]);
+    while(opts.size<4){ const hh = Math.floor(Math.random()*12)+1; const mm = minuteOptions[Math.floor(Math.random()*minuteOptions.length)]; opts.add(pad(hh)+':'+pad(mm)); }
+    const arr = Array.from(opts).sort(()=>Math.random()-0.5);
+    const grid=document.createElement('div'); grid.className='row'; grid.style.marginTop='12px';
+    arr.forEach(opt=>{ const b=document.createElement('div'); b.className='option'; b.textContent=opt; b.onclick=()=>{ grid.querySelectorAll('.option').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }; grid.appendChild(b); });
+    view.appendChild(grid);
+    current = {type:'analogue', answer:correct, grid:grid};
+
+    checkBtn.onclick = ()=>{ const sel = grid.querySelector('.option.selected'); if(!sel){ setFeedback('Choose one option first.'); return; } if(sel.textContent === current.answer){ sel.classList.add('correct'); addScore(5); setFeedback('Correct! +5 pts.'); progressAdd(15); lockCheck(); beep(880); } else { addScore(-1); setFeedback('Not correct. Try hint or try again. (-1pt)'); beep(220); } };
+  }
+
+  // Timetable
+  function renderTimetable(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Timetables & Elapsed Time'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Read start and end times; calculate durations. Focus on intervals that do NOT bridge through 60 for this activity.'; view.appendChild(hint);
+    const table=document.createElement('table'); table.style.width='100%'; table.style.borderCollapse='collapse'; table.style.marginTop='12px'; const rows=[ ['07:30','Register & Dua'], ['08:00','Math'], ['09:15','Science'], ['10:15','Recess'], ['10:45','English'], ['12:15','Dhuhr Prayer & Lunch'], ['13:15','History'] ];
+    rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td style="padding:6px;border-bottom:1px solid #f3f4f6;width:96px">${r[0]}</td><td style="padding:6px;border-bottom:1px solid #f3f4f6">${r[1]}</td>`; table.appendChild(tr); }); view.appendChild(table);
+    const qWrap=document.createElement('div'); qWrap.style.marginTop='12px'; qWrap.innerHTML = '<div class="small">Question: How long is Recess (starts 10:15, ends 10:45)? Enter answer as <b>minutes</b> (e.g., 30)</div>';
+    const input=document.createElement('input'); input.type='number'; input.id='timetable_input'; input.style.marginTop='6px'; qWrap.appendChild(input); view.appendChild(qWrap);
+    current = {type:'timetable', answer:'30', input:input};
+    checkBtn.onclick = ()=>{ const val = input.value.trim(); if(val===''){ setFeedback('Enter your answer in minutes.'); return; } if(val === current.answer){ addScore(6); setFeedback('Correct — Recess 30 minutes. +6 pts'); progressAdd(15); lockCheck(); beep(880); } else { addScore(-1); setFeedback('Incorrect — check subtraction of times. (-1pt)'); beep(220); } };
+  }
+
+  // 24-hour conversion
+  function render24hr(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='12-hour ↔ 24-hour Conversion'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Convert pm times by adding 12 hours (except 12pm = 12:00). 12am = 00:00.'; view.appendChild(hint);
+    const pmHours=[1,2,3,4,5,6,7,8,9,10,11]; const hour=pmHours[Math.floor(Math.random()*pmHours.length)]; const minute = [0,15,30,45][Math.floor(Math.random()*4)]; const twelve = hour + ':' + pad(minute);
+    const correct24 = pad(hour+12) + ':' + pad(minute);
+    const q = document.createElement('div'); q.style.marginTop='12px'; q.innerHTML = `<div class="small">Convert to 24-hour time: <b>${twelve} p.m.</b></div><div style="margin-top:8px"><input id="conv24_in" placeholder="HH:MM" /></div>`; view.appendChild(q);
+    // ensure input reference
+    setTimeout(()=>{ const inp=document.getElementById('conv24_in'); current={type:'24hr', answer:correct24, input:inp}; },0);
+    checkBtn.onclick = ()=>{ const val = (current.input.value||'').trim(); if(!val){ setFeedback('Enter 24-hour time like 14:00'); return; } if(val === current.answer){ addScore(5); setFeedback('Correct! +5 pts'); progressAdd(12); lockCheck(); beep(880); } else { addScore(-1); setFeedback('Incorrect — remember add 12 to pm hours (except 12pm). (-1pt)'); beep(220); } };
+  }
+
+  // conversions
+  function renderConversion(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Time Unit Conversions'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Convert compound units: e.g., 1.5 minutes = 90 seconds. Use place-value for time units.'; view.appendChild(hint);
+    const question='Convert 2.5 minutes to seconds'; const q=document.createElement('div'); q.style.marginTop='12px'; q.innerHTML=`<div class="small">${question}</div><div style="margin-top:8px"><input id="conv_in" placeholder="answer e.g., 150" /></div>`; view.appendChild(q);
+    setTimeout(()=>{ current={type:'conv', answer:'150', input:document.getElementById('conv_in')}; },0);
+    checkBtn.onclick = ()=>{ const val=(current.input.value||'').trim(); if(!val){ setFeedback('Enter an answer in seconds'); return; } if(val === current.answer){ addScore(6); setFeedback('Correct — 2.5 mins = 150 seconds (+6 pts)'); progressAdd(15); lockCheck(); beep(880); } else { addScore(-1); setFeedback('Incorrect — 2.5 × 60 = 150. (-1pt)'); beep(220); } };
+  }
+
+  // Mixed practice
+  function renderPractice(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Mixed Practice — Quick Quiz'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='A 5-question mixed set.'; view.appendChild(hint);
+    const pool=[];
+    const h1=Math.floor(Math.random()*12)+1; const m1=[0,15,30,45][Math.floor(Math.random()*4)]; pool.push({type:'analogue_read', h:h1, m:m1, answer:pad(h1)+':'+pad(m1), prompt:'What is the digital time shown?'});
+    pool.push({type:'elapsed', prompt:'How many minutes between 09:10 and 09:40?', answer:'30'});
+    pool.push({type:'24', prompt:'Convert 7:15 p.m. to 24-hour', answer:pad(19)+':15'});
+    pool.push({type:'conv', prompt:'Convert 1.25 minutes to seconds', answer:'75'});
+    pool.push({type:'timetable2', prompt:'If school starts 07:30 and lunch at 12:15, how many hours and minutes between start and lunch? (format H:MM)', answer:'4:45'});
+
+    let idx=0;
+    function showPractice(){ view.querySelectorAll('.practice')?.forEach(n=>n.remove()); const obj=pool[idx]; const wrap=document.createElement('div'); wrap.className='practice'; wrap.style.marginTop='12px'; wrap.innerHTML=`<div class="small">Q${idx+1}: ${obj.prompt}</div>`;
+      if(obj.type==='analogue_read'){ const clock=createClockElement(obj.h,obj.m); wrap.appendChild(clock); const inp=document.createElement('input'); inp.id='p_in'; inp.placeholder='HH:MM'; inp.style.marginTop='8px'; wrap.appendChild(inp); }
+      else { const inp=document.createElement('input'); inp.id='p_in'; inp.placeholder='answer'; inp.style.marginTop='8px'; wrap.appendChild(inp); }
+      view.appendChild(wrap);
+      current={type:'practice', pool:pool, idx:idx, input:document.getElementById('p_in')};
+      checkBtn.onclick = ()=>{ const val=(current.input.value||'').trim(); if(!val){ setFeedback('Enter an answer'); return; } const correct = pool[current.idx].answer; if(val===correct){ addScore(4); setFeedback('Correct!'); progressAdd(20); beep(880); } else { addScore(-1); setFeedback('Incorrect — expected: '+correct); beep(220); } idx++; if(idx<pool.length){ setTimeout(()=>{ showPractice(); },600); } else { setFeedback('Practice set complete'); lockCheck(); } };
+    }
+    showPractice();
+  }
+
+  // hint logic
+  hintBtn.addEventListener('click', ()=>{ if(!current){ setFeedback('Choose a task first.'); return; } switch(current.type){ case 'analogue': setFeedback('Hint: minute hand position tells minutes (e.g., 15→quarter past)'); break; case 'timetable': setFeedback('Hint: subtract end time − start time'); break; case '24hr': setFeedback('Hint: add 12 to pm hours (7pm→19)'); break; case 'conv': setFeedback('Hint: minutes × 60 = seconds'); break; case 'practice': setFeedback('Break into smaller steps'); break; default: setFeedback('Think step-by-step.'); } addScore(-1); });
+
+  nextBtn.addEventListener('click', ()=>{ const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); unlockCheck(); setFeedback('New task loaded'); });
+  resetBtn.addEventListener('click', ()=>{ if(confirm('Reset score and progress?')){ score=0; progress=0; stars=0; updateUI(); const active=document.querySelector('.tab.active'); renderTab(active.dataset.tab); setFeedback('Reset complete'); } });
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s=new SpeechSynthesisUtterance('Bismillah. O Allah, grant us beneficial knowledge and wisdom.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); } else { alert('Dua: Bismillah. O Allah, grant us beneficial knowledge and wisdom.'); } });
+
+  // init
+  updateUI(); renderTab('analogue');
+
+  window._Y4 = {renderTab, addScore, progressAdd};
+});
+</script>
+</body>
+</html>

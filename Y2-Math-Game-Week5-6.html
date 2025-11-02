@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Year 2 Math Interactive Game - Week 5 & 6</title>
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #d1f7c4, #a1e3f9);
+    text-align: center;
+    padding: 20px;
+  }
+  h1 {
+    color: #1b4965;
+  }
+  .game-box {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 600px;
+    margin: 20px auto;
+  }
+  button {
+    background: #1b4965;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #2d6a8f;
+  }
+  .question {
+    font-size: 18px;
+    margin: 15px 0;
+  }
+  input {
+    padding: 8px;
+    border: 2px solid #1b4965;
+    border-radius: 8px;
+    width: 120px;
+    text-align: center;
+  }
+  .feedback {
+    font-weight: bold;
+    margin-top: 10px;
+  }
+  canvas {
+    border: 2px dashed #1b4965;
+    background: #fefefe;
+    border-radius: 10px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+  <h1>📘 Year 2 Math Interactive Game (Week 5 & 6)</h1>
+  <div class="game-box">
+    <h2 id="topic">Topic: Fact Family Fun</h2>
+    <div id="question" class="question"></div>
+    <input type="text" id="answer" placeholder="Type your answer..." />
+    <div>
+      <button id="check">Check</button>
+      <button id="next">Next</button>
+      <button id="sketch">Sketch</button>
+    </div>
+    <div id="feedback" class="feedback"></div>
+    <canvas id="drawArea" width="400" height="250" style="display:none;"></canvas>
+  </div>
+
+<script>
+const topics = {
+  factFamily: {
+    title: 'Fact Family Fun',
+    questions: [
+      'If 8 + 2 = 10, what subtraction can you make from it?',
+      'If 5 + 3 = 8, what subtraction can you make from it?',
+      'If 6 + 4 = 10, what subtraction can you make from it?',
+      'If 9 + 1 = 10, what subtraction can you make from it?',
+      'If 7 + 3 = 10, what subtraction can you make from it?'
+    ],
+    answers: ['10 - 2 = 8', '8 - 3 = 5', '10 - 4 = 6', '10 - 1 = 9', '10 - 3 = 7']
+  },
+  complements: {
+    title: 'Complement Match',
+    questions: [
+      'What is the complement of 7 to make 20?',
+      'What is the complement of 12 to make 20?',
+      'What number completes 15 to make 20?',
+      'What is the complement of 30 to make 100?',
+      'What is the complement of 65 to make 100?'
+    ],
+    answers: ['13', '8', '5', '70', '35']
+  },
+  addition: {
+    title: 'Addition without Regrouping',
+    questions: [
+      'Add 23 + 5 = ?',
+      'Add 45 + 3 = ?',
+      'Add 32 + 6 = ?',
+      'Add 50 + 7 = ?',
+      'Add 41 + 2 = ?'
+    ],
+    answers: ['28', '48', '38', '57', '43']
+  }
+};
+
+let topicKeys = Object.keys(topics);
+let currentTopicIndex = 0;
+let currentQuestionIndex = 0;
+
+const topicEl = document.getElementById('topic');
+const questionEl = document.getElementById('question');
+const answerEl = document.getElementById('answer');
+const feedbackEl = document.getElementById('feedback');
+const canvas = document.getElementById('drawArea');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+
+function loadQuestion() {
+  const topic = topics[topicKeys[currentTopicIndex]];
+  topicEl.textContent = `Topic: ${topic.title}`;
+  questionEl.textContent = topic.questions[currentQuestionIndex];
+  answerEl.value = '';
+  feedbackEl.textContent = '';
+}
+
+document.getElementById('check').addEventListener('click', () => {
+  const topic = topics[topicKeys[currentTopicIndex]];
+  const correctAnswer = topic.answers[currentQuestionIndex];
+  if (answerEl.value.trim() === correctAnswer) {
+    feedbackEl.textContent = '✅ Correct! Well done!';
+    feedbackEl.style.color = 'green';
+  } else {
+    feedbackEl.textContent = `❌ Try again! Hint: ${correctAnswer}`;
+    feedbackEl.style.color = 'red';
+  }
+});
+
+document.getElementById('next').addEventListener('click', () => {
+  currentQuestionIndex++;
+  const topic = topics[topicKeys[currentTopicIndex]];
+  if (currentQuestionIndex >= topic.questions.length) {
+    currentQuestionIndex = 0;
+    currentTopicIndex++;
+    if (currentTopicIndex >= topicKeys.length) currentTopicIndex = 0;
+  }
+  loadQuestion();
+});
+
+document.getElementById('sketch').addEventListener('click', () => {
+  canvas.style.display = canvas.style.display === 'none' ? 'block' : 'none';
+});
+
+canvas.addEventListener('mousedown', () => (drawing = true));
+canvas.addEventListener('mouseup', () => (drawing = false));
+canvas.addEventListener('mousemove', draw);
+
+function draw(e) {
+  if (!drawing) return;
+  const rect = canvas.getBoundingClientRect();
+  ctx.fillStyle = '#1b4965';
+  ctx.beginPath();
+  ctx.arc(e.clientX - rect.left, e.clientY - rect.top, 4, 0, 2 * Math.PI);
+  ctx.fill();
+}
+
+loadQuestion();
+</script>
+</body>
+</html>

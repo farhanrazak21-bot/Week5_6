@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y5 Time Intervals — Week 5 & 6 Interactive</title>
+<style>
+:root{--bg:#fff8d9;--panel:#ffffff;--muted:#6b7280;--accent:#f59e0b;--accent2:#06b6d4;--ok:#16a34a;--shadow:0 10px 30px rgba(15,23,42,0.06);--font:system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:linear-gradient(135deg,var(--bg) 0%, #e6fbf5 100%);color:#0f172a}
+.app{max-width:1100px;margin:18px auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tab{background:var(--panel);border:1px solid rgba(15,23,42,0.06);padding:8px 12px;border-radius:10px;cursor:pointer}
+.tab.active{box-shadow:0 6px 18px rgba(0,0,0,0.06);border-color:var(--accent)}
+.container{display:grid;gap:16px;margin-top:16px}
+@media(min-width:980px){.container{grid-template-columns:1fr 360px}}
+.card{background:var(--panel);padding:14px;border-radius:12px;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.big{font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+.button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+.button.ghost{background:transparent;color:var(--accent);border:2px solid rgba(15,23,42,0.06)}
+.button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+input,select{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+.progress{height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),#34d399);width:0%}
+.small{font-size:13px;color:var(--muted)}
+.clock{width:220px;height:220px;border-radius:50%;background:linear-gradient(180deg,#fff,#f2f9ff);border:6px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,0.06);position:relative}
+.hand{position:absolute;left:50%;top:50%;transform-origin:0 0}
+.canvas-wrap{background:#fff;padding:8px;border-radius:10px;border:1px dashed #e6edf3}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y5 Time Intervals — Week 5 & 6 Interactive</h1>
+      <div class="sub">Measure short intervals • Bridge through 60 • Time zones • Decimal hours • Rounding • Islamic & Eco links</div>
+      <div class="tabs" style="margin-top:12px">
+        <button class="tab active" data-tab="stopwatch">Short Intervals (stopwatch)</button>
+        <button class="tab" data-tab="bridge">Bridging through 60</button>
+        <button class="tab" data-tab="decimal">Decimal hours & rounding</button>
+        <button class="tab" data-tab="zones">Time Zones (12/24h)</button>
+        <button class="tab" data-tab="mixed">Mixed Practice</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card small">Score: <b id="score">0</b></div>
+      <div class="card small">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="reset" class="button ghost">Restart</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <main id="main" class="card">
+      <div id="view"></div>
+    </main>
+
+    <aside class="card">
+      <div class="big">Teacher Panel & Prompts</div>
+      <div class="small hint" style="margin-top:8px">Open the tabs to run activities. Use "Hint" to guide students (penalty -1). Encourage dua and reflection on time (Taqwa & Earth cycles).</div>
+
+      <div style="margin-top:12px">
+        <div class="row">
+          <button id="hintBtn" class="button ghost">Hint (-1 pt)</button>
+          <button id="checkBtn" class="button">Check Answer</button>
+          <button id="nextBtn" class="button secondary">Next</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="small">
+        <div><b>Progress</b></div>
+        <div class="progress" style="margin-top:6px"><i id="progBar"></i></div>
+        <div id="feedback" style="margin-top:8px"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="big">Quick Dua</div>
+        <div class="small" style="margin-top:6px">Play a short dua to start the class.</div>
+        <div style="margin-top:6px"><button id="playDua" class="button ghost">Play Dua</button></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="small" style="margin-top:12px">Tip: link tasks to Salah times and natural cycles. Close with dua.</footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Elements
+  const tabs = [...document.querySelectorAll('.tab')];
+  const view = document.getElementById('view');
+  const hintBtn = document.getElementById('hintBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('reset');
+  const progBar = document.getElementById('progBar');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const playDua = document.getElementById('playDua');
+
+  // state
+  let score = 0, stars = 0, progress = 0, current = null, soundOn = true;
+
+  function updateUI(){ scoreEl.textContent = score; starsEl.textContent = '★'.repeat(stars) + '☆'.repeat(3-stars); progBar.style.width = progress + '%'; }
+  function addScore(n){ score = Math.max(0, score + n); stars = score>=40?3:score>=25?2:score>=10?1:0; updateUI(); }
+  function setFeedback(msg){ feedback.textContent = msg || ''; }
+
+  // audio
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq=880,d=0.08){ try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.2,audioCtx.currentTime+0.01); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+d); o.stop(audioCtx.currentTime+d+0.02);}catch(e){} }
+
+  // tab handlers
+  tabs.forEach(t=>t.addEventListener('click', ()=>{ tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active'); renderTab(t.dataset.tab); }));
+
+  function renderTab(id){ current = null; setFeedback(''); checkBtn.disabled = false; nextBtn.disabled = false; if(id==='stopwatch') renderStopwatch(); else if(id==='bridge') renderBridge(); else if(id==='decimal') renderDecimal(); else if(id==='zones') renderZones(); else if(id==='mixed') renderMixed(); }
+
+  // ---------- 1) Stopwatch / short intervals ----------
+  function renderStopwatch(){ view.innerHTML = '';
+    const title = document.createElement('div'); title.className='big'; title.textContent='Short Intervals — Stopwatch (simulate or use teacher stopwatch)'; view.appendChild(title);
+    const p = document.createElement('div'); p.className='small hint'; p.textContent = 'Measure short actions (e.g., say Subhanallah 5 times) — record seconds and milliseconds.'; view.appendChild(p);
+
+    const instr = document.createElement('div'); instr.style.marginTop='10px'; instr.innerHTML = '<div><b>Simulated stopwatch:</b> Press Start, then Stop after the event. You can also enter your measured value manually.</div>';
+    view.appendChild(instr);
+
+    const controls = document.createElement('div'); controls.className='row'; controls.style.marginTop='10px';
+    const startBtn = document.createElement('button'); startBtn.className='button ghost'; startBtn.textContent = 'Start';
+    const stopBtn = document.createElement('button'); stopBtn.className='button ghost'; stopBtn.textContent = 'Stop'; stopBtn.disabled = true;
+    const clearBtn = document.createElement('button'); clearBtn.className='button ghost'; clearBtn.textContent = 'Clear';
+    const display = document.createElement('div'); display.style.minWidth='140px'; display.style.fontWeight='700'; display.textContent='0.000 s';
+    controls.appendChild(startBtn); controls.appendChild(stopBtn); controls.appendChild(clearBtn); controls.appendChild(display);
+    view.appendChild(controls);
+
+    const inputWrap = document.createElement('div'); inputWrap.style.marginTop='12px'; inputWrap.innerHTML = 'Recorded (s): <input id="stop_input" placeholder="e.g., 0.32" style="width:120px"/> &nbsp;Or use stopwatch above.';
+    view.appendChild(inputWrap);
+
+    // simulated stopwatch logic
+    let t0 = null, raf=null;
+    function tick(){ const dt = (performance.now() - t0)/1000; display.textContent = dt.toFixed(3) + ' s'; raf = requestAnimationFrame(tick); }
+    startBtn.onclick = ()=>{ t0 = performance.now(); startBtn.disabled = true; stopBtn.disabled = false; clearBtn.disabled = true; tick(); setFeedback('Timing...'); };
+    stopBtn.onclick = ()=>{ cancelAnimationFrame(raf); const dt = (performance.now()-t0)/1000; display.textContent = dt.toFixed(3) + ' s'; document.getElementById('stop_input').value = dt.toFixed(3); startBtn.disabled=false; stopBtn.disabled=true; clearBtn.disabled=false; setFeedback('Stopped. Enter or Check.'); };
+    clearBtn.onclick = ()=>{ display.textContent='0.000 s'; document.getElementById('stop_input').value=''; setFeedback('Cleared.'); };
+
+    current = {type:'stopwatch', answer:null, input:()=>document.getElementById('stop_input')};
+
+    checkBtn.onclick = ()=>{
+      const val = (current.input().value||'').trim(); if(!val){ setFeedback('Enter your recorded time in seconds (decimal).'); return; }
+      // simple validation: must be a positive number less than, say, 10s
+      const num = Number(val); if(Number.isNaN(num) || num<=0){ setFeedback('Enter a positive number (e.g., 0.32)'); return; }
+      // we won't have a single correct answer — teacher judges: accept any value but award small pts for reasonable range
+      if(num < 0.1) { addScore(-1); setFeedback('Too small — check measurement. (-1pt)'); beep(220); }
+      else if(num <= 5) { addScore(3); setFeedback('Reasonable short interval recorded — +3 pts (teacher may review).'); beep(880); progressAdd(8); lockCheck(); }
+      else { addScore(1); setFeedback('Longer than expected but recorded (+1pt).'); beep(660); progressAdd(5); lockCheck(); }
+    };
+  }
+
+  // ---------- 2) Bridging through 60 ----------
+  function renderBridge(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Bridging through 60 — minutes & seconds'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Calculate elapsed times that cross an hour/60 boundary.'; view.appendChild(hint);
+
+    const qWrap = document.createElement('div'); qWrap.style.marginTop='12px'; qWrap.innerHTML = '<div>Question: From 08:45 to 09:10 — how many minutes have passed? Enter answer as minutes (e.g., 25)</div><input id="bridge_in" placeholder="minutes" style="margin-top:8px;width:120px"/>';
+    view.appendChild(qWrap);
+
+    current = {type:'bridge', answer:'25', input:()=>document.getElementById('bridge_in')};
+
+    checkBtn.onclick = ()=>{ const val = (current.input().value||'').trim(); if(!val){ setFeedback('Enter the elapsed minutes.'); return; } if(val === current.answer){ addScore(6); setFeedback('Correct — 25 minutes. +6 pts'); progressAdd(12); lockCheck(); beep(880);} else { addScore(-1); setFeedback('Incorrect — try counting to the next hour then add remaining minutes. (-1pt)'); beep(220);} };
+  }
+
+  // ---------- 3) Decimal hours & rounding ----------
+  function renderDecimal(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Decimal hours & Rounding'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Convert minutes to decimal hours and round to nearest tenth.'; view.appendChild(hint);
+
+    // question: 45 minutes → 0.75; rounding example
+    const qWrap = document.createElement('div'); qWrap.style.marginTop='12px'; qWrap.innerHTML = '<div>Q1: Convert 45 minutes to hours (decimal). Enter to 2 d.p. (e.g., 0.75)</div><input id="dec_in" placeholder="e.g., 0.75" style="margin-top:8px;width:120px"/>';
+    view.appendChild(qWrap);
+
+    current = {type:'decimal', answer:'0.75', input:()=>document.getElementById('dec_in')};
+
+    checkBtn.onclick = ()=>{ const val = (current.input().value||'').trim(); if(!val){ setFeedback('Enter decimal hours.'); return; } if(val === current.answer){ addScore(6); setFeedback('Correct — 45 min = 0.75 h (+6 pts)'); progressAdd(12); lockCheck(); beep(880);} else { addScore(-1); setFeedback('Incorrect — 45 ÷ 60 = 0.75. (-1pt)'); beep(220);} };
+  }
+
+  // ---------- 4) Time Zones (12/24h) ----------
+  function renderZones(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Time Zones — 12/24-hour conversion'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Convert times between zones and 12↔24-hour formats.'; view.appendChild(hint);
+
+    const qWrap = document.createElement('div'); qWrap.style.marginTop='12px';
+    qWrap.innerHTML = '<div>Q: If it is 09:00 in Makkah (UTC+3), what time is it in Kuala Lumpur (UTC+8)? Enter in 24-hour format (HH:MM).</div><input id="zone_in" placeholder="HH:MM" style="margin-top:8px;width:120px"/>';
+    view.appendChild(qWrap);
+
+    // Makkah 09:00 +5 hours -> KL 14:00
+    current = {type:'zones', answer:'14:00', input:()=>document.getElementById('zone_in')};
+
+    checkBtn.onclick = ()=>{ const val = (current.input().value||'').trim(); if(!val){ setFeedback('Enter the time in 24-hour format (e.g., 14:00).'); return; } if(val === current.answer){ addScore(7); setFeedback('Correct — 14:00 in Kuala Lumpur (+7 pts)'); progressAdd(15); lockCheck(); beep(880);} else { addScore(-1); setFeedback('Incorrect — KL is UTC+8, Makkah UTC+3. Difference = +5 hours. (-1pt)'); beep(220);} };
+  }
+
+  // ---------- 5) Mixed Practice ----------
+  function renderMixed(){ view.innerHTML=''; const title=document.createElement('div'); title.className='big'; title.textContent='Mixed Practice — 4 quick questions'; view.appendChild(title);
+    const hint=document.createElement('div'); hint.className='small hint'; hint.textContent='Complete the set to get full marks.'; view.appendChild(hint);
+
+    const pool = [
+      {q:'Read the analogue clock: (example) 3:15 — enter HH:MM', type:'read', h:3, m:15, ans:'03:15'},
+      {q:'Elapsed minutes: 11:50 to 12:20 — minutes?', type:'elapsed', ans:'30'},
+      {q:'Convert 30 minutes to decimal hours (2 d.p.)', type:'dec', ans:'0.50'},
+      {q:'Convert 7:30 p.m. to 24-hour', type:'24', ans:'19:30'}
+    ];
+
+    let idx=0; showQ();
+
+    function showQ(){ view.querySelectorAll('.quest')?.forEach(n=>n.remove()); const obj=pool[idx]; const wrap=document.createElement('div'); wrap.className='quest'; wrap.style.marginTop='12px'; wrap.innerHTML = `<div class="small">Q${idx+1}: ${obj.q}</div>`;
+      const inp=document.createElement('input'); inp.id='mix_in'; inp.style.marginTop='8px'; inp.placeholder='answer'; wrap.appendChild(inp);
+      view.appendChild(wrap);
+      current = {type:'mixed', pool:pool, idx:idx, input:()=>document.getElementById('mix_in')};
+      checkBtn.onclick = ()=>{ const val=(current.input().value||'').trim(); if(!val){ setFeedback('Enter an answer'); return; } if(val === pool[current.idx].ans){ addScore(3); setFeedback('Correct! +3'); beep(880); } else { addScore(-1); setFeedback('Incorrect — expected: '+pool[current.idx].ans); beep(220); }
+        idx++; if(idx < pool.length){ setTimeout(showQ,500); } else { setFeedback('Mixed practice complete — well done!'); lockCheck(); progressAdd(40); }
+      };
+    }
+  }
+
+  // helpers
+  function lockCheck(){ checkBtn.disabled = true; }
+  function unlockCheck(){ checkBtn.disabled = false; }
+  function progressAdd(n){ progress = Math.min(100, progress + n); updateUI(); }
+
+  // Hint behaviour
+  hintBtn.addEventListener('click', ()=>{ if(!current){ setFeedback('Choose a task first.'); return; } switch(current.type){ case 'stopwatch': setFeedback('Hint: start the stopwatch and stop as soon as the action finishes.'); break; case 'bridge': setFeedback('Hint: count minutes to next hour, then add remaining minutes.'); break; case 'decimal': setFeedback('Hint: divide minutes by 60.'); break; case 'zones': setFeedback('Hint: compute UTC offsets difference.'); break; default: setFeedback('Think step-by-step.'); } addScore(-1); });
+
+  // Next new task in same tab
+  nextBtn.addEventListener('click', ()=>{ const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); unlockCheck(); setFeedback('New task.'); });
+
+  // Reset
+  resetBtn.addEventListener('click', ()=>{ if(confirm('Reset score and progress?')){ score=0; progress=0; stars=0; updateUI(); const active = document.querySelector('.tab.active'); renderTab(active.dataset.tab); setFeedback('Reset complete.'); } });
+
+  // Dua
+  playDua.addEventListener('click', ()=>{ if('speechSynthesis' in window){ const s = new SpeechSynthesisUtterance('Bismillah. O Allah, help us use our time wisely and grant us beneficial knowledge.'); s.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(s); } else { alert('Dua: Bismillah. O Allah, help us use our time wisely.'); } });
+
+  // initial
+  updateUI(); renderTab('stopwatch');
+
+  // expose for debug
+  window._Y5Time = {renderTab, addScore, progressAdd};
+});
+</script>
+</body>
+</html>

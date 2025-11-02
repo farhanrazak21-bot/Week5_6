@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Y3 Place Value Game — Week 4-6</title>
+<style>
+:root{
+  --panel:#ffffff;
+  --muted:#6b7280;
+  --accent:#ff8a65;
+  --accent2:#60a5fa;
+  --ok:#16a34a;
+  --shadow:0 8px 24px rgba(15,23,42,0.08);
+  --font:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:var(--font);
+  background-color:#f8f8f8;
+  color:#0f172a;
+}
+.app{max-width:1180px;margin:18px auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:top;gap:12px}
+h1{margin:0;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tab{background:var(--panel);border:1px solid rgba(15,23,42,0.06);padding:8px 12px;border-radius:10px;cursor:pointer}
+.tab.active{box-shadow:0 6px 18px rgba(0,0,0,0.06);border-color:var(--accent)}
+.container{display:grid;gap:16px;margin-top:16px}
+@media(min-width:1000px){.container{grid-template-columns:1fr 380px}}
+.card{background:var(--panel);padding:14px;border-radius:12px;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.big{font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+.button{background:var(--accent);border:0;color:white;padding:8px 12px;border-radius:10px;cursor:pointer}
+.button.ghost{background:transparent;color:var(--accent);border:2px solid rgba(15,23,42,0.06)}
+.button.secondary{background:transparent;border:2px solid var(--accent2);color:var(--accent2)}
+input,select{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+.progress{height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),#34d399);width:0%}
+.option{background:#fbfcfd;padding:10px;border-radius:10px;border:1px dashed #e6edf3;cursor:pointer;text-align:center}
+.option.selected{background:var(--accent2);color:white;border:none}
+.small{font-size:13px;color:var(--muted)}
+footer{margin-top:12px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Y3 Place Value Game — Week 4-6</h1>
+      <div class="sub">Place Value • Multiply by 10 • Regrouping • Rounding • Addition Properties • Complements of 100</div>
+      <div class="tabs" style="margin-top:12px">
+        <button class="tab active" data-tab="placevalue">Place Value Builder</button>
+        <button class="tab" data-tab="multiply">Multiply by 10</button>
+        <button class="tab" data-tab="regroup">Regroup & Decompose</button>
+        <button class="tab" data-tab="rounding">Rounding</button>
+        <button class="tab" data-tab="properties">Properties & Complements</button>
+        <button class="tab" data-tab="practice">Mixed Practice</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card small">Score: <b id="score">0</b></div>
+      <div class="card small">Stars: <span id="stars">☆☆☆</span></div>
+      <button id="reset" class="button ghost">Restart</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <main id="main" class="card">
+      <div id="view"></div>
+    </main>
+
+    <aside class="card">
+      <div class="big">Teacher Panel & Prompts</div>
+      <div class="small hint" style="margin-top:8px">Begin each session with a short dua. Encourage students to reflect: Learning and understanding numbers is an act of worship. Eco link: precision prevents waste of resources and time.</div>
+      <div style="margin-top:12px">
+        <div class="row">
+          <button id="hintBtn" class="button ghost">Hint (-1 pt)</button>
+          <button id="checkBtn" class="button">Check Answer</button>
+          <button id="nextBtn" class="button secondary">Next</button>
+        </div>
+      </div>
+      <div style="margin-top:12px" class="small">
+        <div><b>Progress</b></div>
+        <div class="progress" style="margin-top:6px"><i id="progBar"></i></div>
+        <div id="feedback" style="margin-top:8px"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="big">Quick Dua</div>
+        <div class="small" style="margin-top:6px">Play a short dua to start the class.</div>
+        <div style="margin-top:6px"><button id="playDua" class="button ghost">Play Dua</button></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    Tip: Relate each math task to discipline, gratitude, and responsible use of time and resources.
+  </footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  const tabs = [...document.querySelectorAll('.tab')];
+  const view = document.getElementById('view');
+  const hintBtn = document.getElementById('hintBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('reset');
+  const progBar = document.getElementById('progBar');
+  const feedback = document.getElementById('feedback');
+  const scoreEl = document.getElementById('score');
+  const starsEl = document.getElementById('stars');
+  const playDua = document.getElementById('playDua');
+
+  let score=0, stars=0, progress=0, current=null;
+
+  function updateUI(){
+    scoreEl.textContent=score;
+    starsEl.textContent='★'.repeat(stars)+'☆'.repeat(3-stars);
+    progBar.style.width=progress+'%';
+  }
+  function addScore(n){ score=Math.max(0,score+n); stars=score>=40?3:score>=25?2:score>=10?1:0; updateUI(); }
+  function setFeedback(msg){ feedback.textContent=msg; }
+
+  function randomInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+  tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');renderTab(t.dataset.tab);}));
+
+  function renderTab(id){view.innerHTML='';setFeedback('');if(id==='placevalue')renderPlaceValue();else if(id==='multiply')renderMultiply();else if(id==='regroup')renderRegroup();else if(id==='rounding')renderRounding();else if(id==='properties')renderProperties();else if(id==='practice')renderPractice();}
+
+  function renderPlaceValue(){
+    const num=randomInt(100,999);
+    const title=document.createElement('div');title.className='big';title.textContent='Identify the Place Value';
+    const question=document.createElement('div');question.className='small';question.textContent=`What is the value of the digit ${String(num)[1]} in ${num}?`;
+    const opts=[10,100,1,1000].map(v=>{const d=document.createElement('div');d.className='option';d.textContent=v;d.onclick=()=>{view.querySelectorAll('.option').forEach(x=>x.classList.remove('selected'));d.classList.add('selected');};return d;});
+    const grid=document.createElement('div');grid.className='row';opts.forEach(o=>grid.appendChild(o));
+    view.append(title,question,grid);
+    current={type:'pv',ans:10**(2-1)};
+    checkBtn.onclick=()=>{const sel=grid.querySelector('.option.selected');if(!sel){setFeedback('Choose an option');return;}if(parseInt(sel.textContent)==100){addScore(5);setFeedback('Correct!');}else{addScore(-1);setFeedback('Try again!');}};
+  }
+
+  function renderMultiply(){
+    const n=randomInt(1,99);
+    const title=document.createElement('div');title.className='big';title.textContent='Multiply by 10';
+    const q=document.createElement('div');q.className='small';q.textContent=`What is ${n} × 10?`;
+    const inp=document.createElement('input');inp.placeholder='Answer';inp.type='number';
+    view.append(title,q,inp);
+    current={type:'mult',ans:n*10,input:inp};
+    checkBtn.onclick=()=>{if(inp.value==current.ans){addScore(5);setFeedback('Good job!');}else{addScore(-1);setFeedback('Not correct');}};
+  }
+
+  function renderRegroup(){
+    const h=randomInt(1,9),t=randomInt(0,9),o=randomInt(0,9);
+    const num=h*100+t*10+o;
+    view.innerHTML=`<div class='big'>Compose & Decompose</div><div class='small'>Write ${num} in expanded form (e.g., 300+40+2)</div><input id='r_in' placeholder='Answer'>`;
+    current={type:'reg',ans:`${h*100}+${t*10}+${o}`,input:document.getElementById('r_in')};
+    checkBtn.onclick=()=>{const val=current.input.value.replace(/\s/g,'');if(val==current.ans){addScore(6);setFeedback('Excellent!');}else{addScore(-1);setFeedback('Check each place value.');}};
+  }
+
+  function renderRounding(){
+    const num=randomInt(100,999);
+    const title=document.createElement('div');title.className='big';title.textContent='Rounding to Nearest 10';
+    const inp=document.createElement('input');inp.placeholder='Rounded number';inp.type='number';
+    view.append(title,document.createTextNode(`Round ${num} to nearest 10`),document.createElement('br'),inp);
+    const rounded=Math.round(num/10)*10;
+    current={type:'round',ans:rounded,input:inp};
+    checkBtn.onclick=()=>{if(parseInt(inp.value)==rounded){addScore(5);setFeedback('Correct rounding!');}else{addScore(-1);setFeedback('Try the halfway rule.');}};
+  }
+
+  function renderProperties(){
+    view.innerHTML='<div class="big">Commutative Property</div><div class="small">Example: 7+3 = 3+7. Try one!</div>';
+    const a=randomInt(1,9),b=randomInt(1,9);
+    const inp=document.createElement('input');inp.placeholder='a+b = b+a';view.append(document.createTextNode(`If ${a}+${b}=`),inp);
+    current={type:'prop',ans:a+b,input:inp};
+    checkBtn.onclick=()=>{if(parseInt(inp.value)==a+b){addScore(4);setFeedback('Yes! Addition is commutative.');}else{addScore(-1);setFeedback('Not quite. Remember order doesn’t change sum.');}};
+  }
+
+  function renderPractice(){
+    view.innerHTML='<div class="big">Mixed Practice</div><div class="small">Answer a quick set of mixed review questions.</div>';
+    const qs=[{q:'What is 40×10?',a:'400'},{q:'Round 237 to nearest 100',a:'200'},{q:'Value of 3 in 345',a:'300'},{q:'9+6=6+?',a:'9'}];
+    const cur=qs[randomInt(0,qs.length-1)];
+    const inp=document.createElement('input');inp.placeholder='Answer';view.append(document.createTextNode(cur.q),document.createElement('br'),inp);
+    current={type:'practice',ans:cur.a,input:inp};
+    checkBtn.onclick=()=>{if(inp.value.trim()==cur.a){addScore(6);setFeedback('Nice work!');}else{addScore(-1);setFeedback('Try again!');}};
+  }
+
+  hintBtn.addEventListener('click',()=>{setFeedback('Think carefully. Use place values and rounding rules!');addScore(-1);});
+  nextBtn.addEventListener('click',()=>{const active=document.querySelector('.tab.active');renderTab(active.dataset.tab);setFeedback('New question');});
+  resetBtn.addEventListener('click',()=>{score=0;progress=0;stars=0;updateUI();renderTab('placevalue');});
+
+  playDua.addEventListener('click',()=>{
+    if('speechSynthesis' in window){const s=new SpeechSynthesisUtterance('Bismillah. O Allah, grant us beneficial knowledge and wisdom.');window.speechSynthesis.cancel();window.speechSynthesis.speak(s);}else{alert('Dua: Bismillah. O Allah, grant us beneficial knowledge and wisdom.');}
+  });
+
+  updateUI();
+  renderTab('placevalue');
+});
+</script>
+</body>
+</html>
